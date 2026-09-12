@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#1A1E2A">
     <title>LootStar — Мины</title>
     <link rel="stylesheet" href="/mines.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
 </head>
 <body>
 
@@ -80,6 +81,29 @@
             <span>Профиль</span>
         </button>
     </nav>
+
+    <!-- ═══ МОДАЛКА ПОБЕДЫ ═══ -->
+    <div class="win-modal-overlay" id="winModal">
+        <div class="win-modal">
+            <div class="win-modal-badge">Вы выиграли!</div>
+
+            <div class="win-modal-media" id="winModalMedia">
+                <img class="win-modal-img" id="winModalImg" src="star.png" alt="">
+            </div>
+
+            <div class="win-modal-name" id="winModalName"></div>
+            <div class="win-modal-value" id="winModalValue">
+                <img src="star.png" alt=""><span>0</span>
+            </div>
+
+            <div class="win-modal-btns">
+                <button class="win-modal-btn sell" onclick="sellWinGift()">Продать</button>
+                <button class="win-modal-btn primary" onclick="upgradeWinGift()">Апгрейд</button>
+            </div>
+
+            <button class="win-modal-close" onclick="closeWinModal()">Закрыть</button>
+        </div>
+    </div>
 
     <div class="toast" id="toast"></div>
     <script src="/mines.js"></script>

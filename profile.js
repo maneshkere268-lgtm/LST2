@@ -62,7 +62,9 @@ function updateProfileUI() {
     document.getElementById('balanceDisplay').textContent = formatStars(userStars);
     document.getElementById('statBalance').textContent = formatStars(userStars);
 
-    const totalValue = inventory.reduce((sum, item) => sum + (item.stars || 0), 0);
+    // Баг-фикс: раньше тут не было fallback на price*125, как везде в проекте —
+    // предметы без явного поля stars считались за 0 в общей стоимости.
+    const totalValue = inventory.reduce((sum, item) => sum + (item.stars || Math.round((item.price || 0) * 125)), 0);
     document.getElementById('statGifts').textContent = inventory.length;
     document.getElementById('statValue').textContent = formatStars(totalValue);
 }

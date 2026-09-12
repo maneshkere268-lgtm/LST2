@@ -2,8 +2,10 @@ const $ = id => document.getElementById(id);
 const STAR_ICON = 'star.png';
 const GIFT_FALLBACK = 'star.png';
 const TON_TO_STARS = 125;
-const MIN_CHANCE = 5;         // минимум 5% (всё что выше 95% шанса — не показываем как цель)
-const MAX_TARGET_PRICE_MULT = 20; // цель до x20 от цены
+const MIN_CHANCE = 5;    // минимальный шанс цели (в %)
+const MAX_CHANCE = 85;   // максимальный шанс цели (в %) — выше не показываем
+const MAX_TARGET_PRICE_MULT = 20;
+const HOUSE_EDGE = 0.95; // честная механика без комиссии
 
 let state = {
     stars: 0,
@@ -17,62 +19,146 @@ let state = {
     activeSection: null
 };
 
-/* Полный список предметов из кейсов (для целей апгрейда) */
-const ALL_GIFTS_POOL = [
-    { name: 'Bear', price: 0.05 },
-    { name: 'Cake', price: 0.1 },
-    { name: 'Gift', price: 0.25 },
-    { name: 'Cookie Heart', price: 0.96 },
-    { name: 'Jester Hat', price: 1.6 },
-    { name: 'Lol Pop', price: 2.24 },
-    { name: 'Happy Brownie', price: 2.8 },
-    { name: 'Xmas Stocking', price: 3.5 },
-    { name: 'Santa Hat', price: 4.11 },
-    { name: 'Tama Gadget', price: 4.01 },
-    { name: 'Jack-in-the-Box', price: 4.39 },
-    { name: 'Happy Brownie', price: 4.34 },
-    { name: 'Ginger Cookie', price: 4.23 },
-    { name: 'Snow Mittens', price: 4.54 },
-    { name: 'Snow Globe', price: 4.65 },
-    { name: 'Cookie Heart', price: 4.71 },
-    { name: 'Light Sword', price: 6.09 },
-    { name: 'Input Key', price: 6.16 },
-    { name: 'Sleigh Bell', price: 6.84 },
-    { name: 'Jolly Chimp', price: 6.92 },
-    { name: 'Surge Board', price: 6.82 },
-    { name: 'Evil Eye', price: 7.45 },
-    { name: 'Jingle Bells', price: 8.05 },
-    { name: 'Fine Pen', price: 8.77 },
-    { name: 'Love Candle', price: 9.49 },
-    { name: 'Skull Flower', price: 11 },
-    { name: 'Valentine Box', price: 11.22 },
-    { name: 'Flying Broom', price: 12 },
-    { name: 'Crystal Ball', price: 12.24 },
-    { name: 'Mad Pumpkin', price: 12.51 },
-    { name: 'Record Player', price: 12.64 },
-    { name: 'Love Potion', price: 14.44 },
-    { name: 'Trapped Heart', price: 15.34 },
-    { name: 'Rare Bird', price: 24.21 },
-    { name: 'Electric Skull', price: 24.96 },
-    { name: 'Eternal Rose', price: 25.18 },
-    { name: 'Diamond Ring', price: 30.43 },
-    { name: 'Signet Ring', price: 32.11 },
-    { name: 'Genie Lamp', price: 33.14 },
-    { name: 'Voodoo Doll', price: 34.68 },
-    { name: 'Toy Bear', price: 35.96 },
-    { name: 'Kissed Frog', price: 36.7 },
-    { name: 'Bonded Ring', price: 39.97 },
-    { name: 'Magic Potion', price: 54.09 },
-    { name: 'Gem Signet', price: 61.19 },
-    { name: 'Ion Gem', price: 71.4 },
-    { name: 'Perfume Bottle', price: 71.2 },
-    { name: 'Mini Oscar', price: 72.7 },
-    { name: 'Nail Bracelet', price: 113.87 },
-    { name: 'Astral Shard', price: 115.25 },
-    { name: 'Loot Bag', price: 120.68 },
-    { name: 'Mighty Arm', price: 112.2 },
-    { name: 'Scared Cat', price: 229.49 }
-];
+/* ═══════════════════════════════════════════════════════════
+ * Полный список предметов из Fine Pen.txt (цены в TON).
+ * Дубликаты имён убраны — оставлена одна цена на имя
+ * (берётся самая высокая).
+ * ═══════════════════════════════════════════════════════════ */
+const ALL_GIFTS_POOL = (() => {
+    const RAW = [
+        ['Fine Pen', 1096.25],
+        ['Algorithm Cup', 312375],
+        ['Intelligence Cup', 298350],
+        ['Astral Shard', 14648.75],
+        ['B-Day Candle', 598.75],
+        ['Berry Box', 1072.5],
+        ['Big Year', 500],
+        ['Bonded Ring', 5048.75],
+        ['Bow Tie', 612.5],
+        ['Bunny Muffin', 972.5],
+        ['Candy Cane', 501.25],
+        ['Cookie Heart', 586.25],
+        ['Crystal Ball', 1506.25],
+        ['Desk Calendar', 573.75],
+        ['Diamond Ring', 3825],
+        ['Durov’s Cap', 49725],
+        ['Easter Egg', 533.75],
+        ['Electric Skull', 3117.5],
+        ['Eternal Candle', 737.5],
+        ['Eternal Rose', 3147.5],
+        ['Evil Eye', 931.25],
+        ['Flying Broom', 1495],
+        ['Gem Signet', 7648.75],
+        ['Genie Lamp', 4153.75],
+        ['Ginger Cookie', 530],
+        ['Hanging Star', 1133.75],
+        ['Heart Locket', 139612.5],
+        ['Heroic Helmet', 22493.75],
+        ['Hex Pot', 548.75],
+        ['Holiday Drink', 501.25],
+        ['Homemade Cake', 587.5],
+        ['Hypno Lollipop', 505],
+        ['Ion Gem', 8925],
+        ['Jack-in-the-Box', 548.75],
+        ['Jelly Bunny', 981.25],
+        ['Jester Hat', 503.75],
+        ['Jingle Bells', 1007.5],
+        ['Kissed Frog', 4652.5],
+        ['Light Sword', 762.5],
+        ['Lol Pop', 492.5],
+        ['Loot Bag', 15158.75],
+        ['Love Candle', 1186.25],
+        ['Love Potion', 1806.25],
+        ['Lunar Snake', 500],
+        ['Lush Bouquet', 726.25],
+        ['Mad Pumpkin', 1557.5],
+        ['Magic Potion', 6761.25],
+        ['Mini Oscar', 9180],
+        ['Nail Bracelet', 14333.75],
+        ['Neko Helmet', 4690],
+        ['Party Sparkler', 536.25],
+        ['Perfume Bottle', 9295],
+        ['Pet Snake', 506.25],
+        ['Plush Pepe', 828750],
+        ['Precious Peach', 31873.75],
+        ['Record Player', 1577.5],
+        ['Restless Jar', 666.25],
+        ['Sakura Flower', 1233.75],
+        ['Santa Hat', 513.75],
+        ['Scared Cat', 28681.25],
+        ['Sharp Tongue', 5481.25],
+        ['Signet Ring', 4077.5],
+        ['Skull Flower', 1396.25],
+        ['Sleigh Bell', 863.75],
+        ['Snake Box', 498.75],
+        ['Snow Globe', 572.5],
+        ['Snow Mittens', 560],
+        ['Spiced Wine', 545],
+        ['Spy Agaric', 690],
+        ['Star Notepad', 545],
+        ['Swiss Watch', 6146.25],
+        ['Tama Gadget', 502.5],
+        ['Top Hat', 1272.5],
+        ['Toy Bear', 4495],
+        ['Trapped Heart', 1900],
+        ['Vintage Cigar', 4576.25],
+        ['Voodoo Doll', 4392.5],
+        ['Winter Wreath', 501.25],
+        ['Witch Hat', 607.5],
+        ['Xmas Stocking', 490],
+        ['Cupid Charm', 2698.75],
+        ['Whip Cupcake', 547.5],
+        ['Valentine Box', 1441.25],
+        ['Joyful Bundle', 947.5],
+        ['Low Rider', 6776.25],
+        ['Westside Sign', 12353.75],
+        ['Snoop Cigar', 1838.75],
+        ['Swag Bag', 687.5],
+        ['Snoop Dogg', 657.5],
+        ['Ionic Dryer', 1831.25],
+        ['Jolly Chimp', 878.75],
+        ['Moon Pendant', 775],
+        ['Stellar Rocket', 606.25],
+        ['Artisan Brick', 7522.5],
+        ['Input Key', 778.75],
+        ['Mighty Arm', 14375],
+        ['Fresh Socks', 543.75],
+        ['Clover Pin', 600],
+        ['Sky Stilettos', 2422.5],
+        ['Faith Amulet', 667.5],
+        ['Happy Brownie', 542.5],
+        ['Ice Cream', 545],
+        ['Instant Ramen', 523.75],
+        ['Mousse Cake', 563.75],
+        ['Spring Basket', 665],
+        ['Bling Binky', 2931.25],
+        ['Money Pot', 555],
+        ['Pretty Posy', 587.5],
+        ['Khabib’s Papakha', 3026.25],
+        ['UFC Strike', 1941.25],
+       ['Victory Medal', 561.25],
+        ['Rare Bird', 3028.75],
+        ['Mood Pack', 555],
+        ['Pool Float', 500],
+        ['Timeless Book', 560],
+        ['Chill Flame', 508.75],
+        ['Vice Cream', 507.5],
+        ['Surge Board', 855],
+        ['Liberty Figure', 590],
+        ['Durov’s Glasses', 11475]
+    ];
+
+    const map = new Map();
+    for (const [name, stars] of RAW) {
+        const key = name.replace(/[’']/g, "'");
+        const priceTon = stars / TON_TO_STARS;
+        const prev = map.get(key);
+        if (!prev || prev.price < priceTon) {
+            map.set(key, { name, price: priceTon });
+        }
+    }
+    return Array.from(map.values());
+})();
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -87,7 +173,6 @@ function init() {
     updateBalanceUI();
     renderInventoryGrid();
 
-    // Авто-выбор предмета из профиля
     const preselected = localStorage.getItem('upgradeItemId');
     if (preselected) {
         const item = state.inventory.find(i => i.id === preselected);
@@ -114,10 +199,12 @@ function updateBalanceUI() {
 }
 
 /* ═══════════ IMAGE ═══════════ */
+function normalizeApostrophes(str) {
+    return str.replace(/[\u2018\u2019\u02BC\u0060\u00B4]/g, "'");
+}
+
 function encodePathPart(str) {
-    const trimmed = str.trim();
-    if (trimmed.includes(' ')) return trimmed.split(/\s+/).map(encodeURIComponent).join('%20');
-    return encodeURIComponent(trimmed);
+    return encodeURIComponent(normalizeApostrophes(str.trim()));
 }
 
 function getGiftImage(name, price) {
@@ -261,7 +348,6 @@ function loadPossibleTargets() {
     const myStars = state.selectedGift.stars;
     state.possibleTargets = [];
 
-    // Уникализируем по имени
     const seen = new Set();
     ALL_GIFTS_POOL.forEach(g => {
         if (seen.has(g.name)) return;
@@ -271,10 +357,9 @@ function loadPossibleTargets() {
         if (gStars <= myStars) return;
         if (gStars > myStars * MAX_TARGET_PRICE_MULT) return;
 
-        // Шанс = моя цена / цена цели * 100
         const chance = (myStars / gStars) * 100;
-        // Отсеиваем: шанс должен быть >= MIN_CHANCE
         if (chance < MIN_CHANCE) return;
+        if (chance > MAX_CHANCE) return;  // ← верхняя граница 85%
 
         state.possibleTargets.push({
             name: g.name,
@@ -292,7 +377,7 @@ function loadPossibleTargets() {
 function renderTargetsList() {
     const list = $('targetsList');
     if (!state.possibleTargets.length) {
-        list.innerHTML = '<div class="empty-msg">Нет подходящих целей<br><small style="opacity:.6">Шанс должен быть не менее ' + MIN_CHANCE + '%</small></div>';
+        list.innerHTML = '<div class="empty-msg">Нет подходящих целей<br><small style="opacity:.6">Шанс должен быть от ' + MIN_CHANCE + '% до ' + MAX_CHANCE + '%</small></div>';
         return;
     }
     list.innerHTML = state.possibleTargets.map(g => {
@@ -369,7 +454,7 @@ function updateWheel() {
     state.currentChance = Math.round(chance * 10) / 10;
     drawGreenArc(state.currentChance);
 
-    if (state.currentChance >= MIN_CHANCE) {
+    if (state.currentChance >= MIN_CHANCE && state.currentChance <= MAX_CHANCE) {
         btn.disabled = false;
     } else {
         btn.disabled = true;
@@ -406,7 +491,7 @@ function doUpgrade() {
     pointerWrap.style.transition = 'none';
     pointerWrap.style.transform = 'rotate(0deg)';
 
-    const success = Math.random() * 100 < state.currentChance;
+    const success = Math.random() * 100 < state.currentChance * HOUSE_EDGE;
 
     const greenAngle = (state.currentChance / 100) * 360;
     let landAngle;
@@ -422,7 +507,6 @@ function doUpgrade() {
 
     void pointerWrap.offsetWidth;
 
-    // Плавное начало + плавное окончание
     pointerWrap.style.transition = `transform ${spinDuration}ms cubic-bezier(0.3, 0, 0.15, 1.05)`;
     pointerWrap.style.transform = `rotate(${totalSpin}deg)`;
 
@@ -445,7 +529,6 @@ function showResult(success) {
         launchConfetti(40);
         playWinLottie(state.targetGift);
 
-        // Убираем старый предмет, добавляем новый
         state.inventory = state.inventory.filter(i => i.id !== state.selectedGift.id);
         state.inventory.push({
             id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -536,7 +619,7 @@ function launchConfetti(count = 40) {
     canvas.height = window.innerHeight;
     const ctx = canvas.getContext('2d');
     const particles = [];
-    const colors = ['#1EE44C','#FDA100','#0098EA','#fff','#a78bfa'];
+    const colors = ['#F5C518','#FFD84D','#fff','#C7C7CC','#8a6a0c'];
 
     for (let i = 0; i < count; i++) {
         particles.push({

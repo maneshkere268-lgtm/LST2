@@ -4,9 +4,11 @@ const TON_TO_STARS = 125;
 const STAR_ICON = 'star.png';
 const GIFT_FALLBACK = 'star.png';
 
+// Предметы, которые лежат в корне проекта (bear.png, gift.png, cake.png, trophy.png)
+const ROOT_ITEMS = new Set(['Bear', 'Gift', 'Cake', 'Trophy']);
+
 /* ═══════════════════════════════════════════════════════════
  * МИНИМАЛЬНЫЕ ЦЕНЫ ФИКСИРОВАННЫХ ПРЕДМЕТОВ (в звёздах)
- * Ниже этих цен предмет не может стоить
  * ═══════════════════════════════════════════════════════════ */
 const MIN_PRICES = {
     'Bear': 15,
@@ -16,14 +18,16 @@ const MIN_PRICES = {
 };
 
 /* ═══════════ КАРТИНКИ ═══════════ */
+function normalizeApostrophes(str) {
+    return str.replace(/[\u2018\u2019\u02BC\u0060\u00B4]/g, "'");
+}
+
 function encodePathPart(str) {
-    const trimmed = str.trim();
-    if (trimmed.includes(' ')) return trimmed.split(/\s+/).map(encodeURIComponent).join('%20');
-    return encodeURIComponent(trimmed);
+    return encodeURIComponent(normalizeApostrophes(str.trim()));
 }
 
 function getGiftImage(name, price) {
-    if (price < 3) {
+    if (ROOT_ITEMS.has(name) || price < 3) {
         const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '');
         return '../' + slug + '.png';
     }
@@ -37,7 +41,7 @@ function getGiftImage(name, price) {
 }
 
 function getGiftLottie(name, price) {
-    if (price < 3) return null;
+    if (ROOT_ITEMS.has(name) || price < 3) return null;
     const modelMatch = name.match(/^(.+?)\s*\((.+)\)\s*$/);
     if (modelMatch) {
         const baseName = modelMatch[1].trim();
@@ -49,165 +53,160 @@ function getGiftLottie(name, price) {
 
 /* ═══════════════════════════════════════════════════════════
  * КЕЙСЫ
- * Цены предметов в TON. Bear/Gift/Cake — не ниже минимума.
- * Bear минимум 0.12 TON (15⭐)
- * Gift минимум 0.20 TON (25⭐)
- * Cake минимум 0.40 TON (50⭐)
- * Trophy минимум 0.80 TON (100⭐)
  * ═══════════════════════════════════════════════════════════ */
 const CASES = [
     {
         id: 1, name: 'Starter Case', price: 0.35, color: 'g-dark',
         cheapPool: [
-            { name: 'Bear', price: 0.12, chance: 15 },   // 15⭐ — минимум
-            { name: 'Gift', price: 0.20, chance: 10 }    // 25⭐ — минимум
+            { name: 'Bear', price: 0.12, chance: 15 },
+            { name: 'Gift', price: 0.20, chance: 10 }
         ],
         items: [
-            { name: 'Cake', price: 0.40, chance: 55 },   // 50⭐ — минимум
-            { name: 'Jester Hat', price: 3.97, chance: 2.4 },
-            { name: 'Lol Pop', price: 3.99, chance: 0.5 },
+            { name: 'Record Player', price: 12.62, chance: 0.1 },
+            { name: 'Jester Hat', price: 4.03, chance: 2.4 },
+            { name: 'Lol Pop', price: 3.94, chance: 0.5 },
             { name: 'Fine Pen', price: 8.77, chance: 0.1 }
         ]
     },
     {
         id: 2, name: 'Sweet Case', price: 1, color: 'g-red',
         cheapPool: [
-            { name: 'Bear', price: 0.12, chance: 15 },    // 15⭐ ✓
-            { name: 'Gift', price: 0.20, chance: 10 }     // 25⭐ ✓
+            { name: 'Bear', price: 0.12, chance: 15 },
+            { name: 'Gift', price: 0.20, chance: 10 }
         ],
         items: [
-            { name: 'Cake', price: 0.40, chance: 50 },    // 50⭐ ✓
-            { name: 'Happy Brownie', price: 4.34, chance: 2.6 },
-            { name: 'Ginger Cookie', price: 4.23, chance: 0.3 },
-            { name: 'Cookie Heart', price: 4.71, chance: 0.1 }
+            { name: 'B-Day Candle', price: 4.79, chance: 0.1 },
+            { name: 'Cookie Heart', price: 4.69, chance: 0.3 },
+            { name: 'Happy Brownie', price: 4.34, chance: 50 },
+            { name: 'Ginger Cookie', price: 4.24, chance: 2.6 }
         ]
     },
     {
         id: 3, name: 'Xmas Case', price: 2, color: 'g-green',
         cheapPool: [
-            { name: 'Gift', price: 0.20, chance: 12 },    // 25⭐ ✓
-            { name: 'Cake', price: 0.40, chance: 10 }     // 50⭐ ✓
+            { name: 'Gift', price: 0.20, chance: 12 },
+            { name: 'Cake', price: 0.40, chance: 10 }
         ],
         items: [
-            { name: 'Xmas Stocking', price: 3.97, chance: 30 },
+            { name: 'Jingle Bells', price: 8.06, chance: 0.5 },
+            { name: 'Sleigh Bell', price: 6.91, chance: 1.5 },
+            { name: 'Snow Globe', price: 4.58, chance: 3 },
+            { name: 'Snow Mittens', price: 4.48, chance: 15 },
             { name: 'Santa Hat', price: 4.11, chance: 25 },
-            { name: 'Snow Mittens', price: 4.54, chance: 15 },
-            { name: 'Snow Globe', price: 4.65, chance: 3 },
-            { name: 'Sleigh Bell', price: 6.84, chance: 1.5 },
-            { name: 'Jingle Bells', price: 8.05, chance: 0.5 }
+            { name: 'Xmas Stocking', price: 3.92, chance: 30 }
         ]
     },
     {
         id: 4, name: 'Love Case', price: 3, color: 'g-pink',
         cheapPool: [
-            { name: 'Cake', price: 0.40, chance: 12 },       // 50⭐ ✓
-            { name: 'Cookie Heart', price: 0.96, chance: 8 } // 120⭐ ✓
+            { name: 'Cake', price: 0.40, chance: 12 },
+            { name: 'Cookie Heart', price: 0.96, chance: 8 }
         ],
         items: [
-            { name: 'Love Candle', price: 9.49, chance: 30 },
-            { name: 'Valentine Box', price: 11.22, chance: 25 },
-            { name: 'Love Potion', price: 14.44, chance: 15 },
-            { name: 'Trapped Heart', price: 15.34, chance: 6 },
             { name: 'Eternal Rose', price: 25.18, chance: 2.5 },
-            { name: 'Cupid Charm', price: 21.68, chance: 1.5 }
+            { name: 'Cupid Charm', price: 21.59, chance: 1.5 },
+            { name: 'Trapped Heart', price: 15.20, chance: 6 },
+            { name: 'Love Potion', price: 14.45, chance: 15 },
+            { name: 'Valentine Box', price: 11.53, chance: 25 },
+            { name: 'Love Candle', price: 9.49, chance: 30 }
         ]
     },
     {
         id: 5, name: 'Halloween Case', price: 5, color: 'g-orange',
         cheapPool: [
-            { name: 'Cake', price: 0.40, chance: 10 },       // 50⭐ ✓
-            { name: 'Cookie Heart', price: 0.96, chance: 8 } // 120⭐ ✓
+            { name: 'Cake', price: 0.40, chance: 10 },
+            { name: 'Cookie Heart', price: 0.96, chance: 8 }
         ],
         items: [
-            { name: 'Evil Eye', price: 7.45, chance: 35 },
-            { name: 'Skull Flower', price: 11, chance: 20 },
-            { name: 'Mad Pumpkin', price: 12.51, chance: 12 },
-            { name: 'Electric Skull', price: 24.96, chance: 8 },
-            { name: 'Voodoo Doll', price: 34.68, chance: 4 },
-            { name: 'Scared Cat', price: 229.49, chance: 0.8 }
+            { name: 'Scared Cat', price: 229.45, chance: 0.8 },
+            { name: 'Voodoo Doll', price: 35.14, chance: 4 },
+            { name: 'Electric Skull', price: 24.94, chance: 8 },
+            { name: 'Mad Pumpkin', price: 12.46, chance: 12 },
+            { name: 'Skull Flower', price: 11.17, chance: 20 },
+            { name: 'Evil Eye', price: 7.45, chance: 35 }
         ]
     },
     {
         id: 6, name: 'Magic Case', price: 7, color: 'g-purple',
         cheapPool: [
-            { name: 'Cookie Heart', price: 0.96, chance: 10 },  // 120⭐ ✓
-            { name: 'Jester Hat', price: 1.60, chance: 8 }      // 200⭐ ✓
+            { name: 'Cookie Heart', price: 0.96, chance: 10 },
+            { name: 'Jester Hat', price: 1.60, chance: 8 }
         ],
         items: [
-            { name: 'Hex Pot', price: 4.35, chance: 30 },
-            { name: 'Witch Hat', price: 4.88, chance: 25 },
-            { name: 'Spy Agaric', price: 5.51, chance: 15 },
-            { name: 'Flying Broom', price: 12, chance: 7 },
-            { name: 'Crystal Ball', price: 12.24, chance: 4 },
-            { name: 'Genie Lamp', price: 33.14, chance: 0.7 },
-            { name: 'Magic Potion', price: 54.09, chance: 0.3 }
+            { name: 'Magic Potion', price: 54.09, chance: 0.3 },
+            { name: 'Genie Lamp', price: 33.23, chance: 0.7 },
+            { name: 'Crystal Ball', price: 12.05, chance: 4 },
+            { name: 'Flying Broom', price: 11.96, chance: 7 },
+            { name: 'Spy Agaric', price: 5.52, chance: 15 },
+            { name: 'Witch Hat', price: 4.86, chance: 25 },
+            { name: 'Hex Pot', price: 4.39, chance: 30 }
         ]
     },
     {
         id: 7, name: 'Animal Case', price: 10, color: 'g-dark',
         cheapPool: [
-            { name: 'Jester Hat', price: 1.60, chance: 10 },     // 200⭐ ✓
-            { name: 'Happy Brownie', price: 2.80, chance: 8 }    // 350⭐ ✓
+            { name: 'Jester Hat', price: 1.60, chance: 10 },
+            { name: 'Happy Brownie', price: 2.80, chance: 8 }
         ],
         items: [
-            { name: 'Snake Box', price: 3.97, chance: 30 },
-            { name: 'Pet Snake', price: 4.05, chance: 25 },
-            { name: 'Lunar Snake', price: 3.92, chance: 20 },
-            { name: 'Jolly Chimp', price: 6.92, chance: 12 },
-            { name: 'Rare Bird', price: 24.21, chance: 3.5 },
+            { name: 'Scared Cat', price: 229.45, chance: 0.1 },
+            { name: 'Kissed Frog', price: 37.22, chance: 0.4 },
             { name: 'Toy Bear', price: 35.96, chance: 1 },
-            { name: 'Kissed Frog', price: 36.7, chance: 0.4 },
-            { name: 'Scared Cat', price: 229.49, chance: 0.1 }
+            { name: 'Rare Bird', price: 24.23, chance: 3.5 },
+            { name: 'Jolly Chimp', price: 7.03, chance: 12 },
+            { name: 'Pet Snake', price: 4.05, chance: 25 },
+            { name: 'Lunar Snake', price: 4.00, chance: 20 },
+            { name: 'Snake Box', price: 3.99, chance: 30 }
         ]
     },
     {
         id: 8, name: 'Gaming Case', price: 15, color: 'g-yellow',
         cheapPool: [
-            { name: 'Happy Brownie', price: 2.80, chance: 10 },  // 350⭐ ✓
-            { name: 'Xmas Stocking', price: 3.50, chance: 8 }    // 437⭐ ✓
+            { name: 'Happy Brownie', price: 2.80, chance: 10 },
+            { name: 'Xmas Stocking', price: 3.50, chance: 8 }
         ],
         items: [
-            { name: 'Tama Gadget', price: 4.01, chance: 25 },
+            { name: 'Perfume Bottle', price: 74.36, chance: 0.4 },
+            { name: 'Mini Oscar', price: 73.44, chance: 0.1 },
+            { name: 'Record Player', price: 12.62, chance: 1.5 },
+            { name: 'Surge Board', price: 6.84, chance: 3 },
+            { name: 'Input Key', price: 6.23, chance: 12 },
+            { name: 'Light Sword', price: 6.10, chance: 18 },
             { name: 'Jack-in-the-Box', price: 4.39, chance: 22 },
-            { name: 'Light Sword', price: 6.09, chance: 18 },
-            { name: 'Input Key', price: 6.16, chance: 12 },
-            { name: 'Surge Board', price: 6.82, chance: 3 },
-            { name: 'Record Player', price: 12.64, chance: 1.5 },
-            { name: 'Perfume Bottle', price: 71.2, chance: 0.4 },
-            { name: 'Mini Oscar', price: 72.7, chance: 0.1 }
+            { name: 'Tama Gadget', price: 4.02, chance: 25 }
         ]
     },
     {
         id: 9, name: 'Gem Case', price: 20, color: 'g-yellow',
         cheapPool: [
-            { name: 'Xmas Stocking', price: 3.50, chance: 10 },  // 437⭐ ✓
-            { name: 'Happy Brownie', price: 5.60, chance: 8 }    // 700⭐ ✓
+            { name: 'Xmas Stocking', price: 3.50, chance: 10 },
+            { name: 'Happy Brownie', price: 5.60, chance: 8 }
         ],
         items: [
-            { name: 'Diamond Ring', price: 30.43, chance: 30 },
-            { name: 'Signet Ring', price: 32.11, chance: 22 },
-            { name: 'Bonded Ring', price: 39.97, chance: 15 },
+            { name: 'Loot Bag', price: 121.27, chance: 0.1 },
+            { name: 'Astral Shard', price: 117.19, chance: 0.4 },
+            { name: 'Nail Bracelet', price: 114.67, chance: 2 },
+            { name: 'Ion Gem', price: 71.40, chance: 4.5 },
             { name: 'Gem Signet', price: 61.19, chance: 8 },
-            { name: 'Ion Gem', price: 71.4, chance: 4.5 },
-            { name: 'Nail Bracelet', price: 113.87, chance: 2 },
-            { name: 'Astral Shard', price: 115.25, chance: 0.4 },
-            { name: 'Loot Bag', price: 120.68, chance: 0.1 }
+            { name: 'Bonded Ring', price: 40.39, chance: 15 },
+            { name: 'Signet Ring', price: 32.62, chance: 22 },
+            { name: 'Diamond Ring', price: 30.60, chance: 30 }
         ]
     },
     {
         id: 10, name: 'Royal Case', price: 150, color: 'g-green',
         cheapPool: [
-            { name: 'Trophy', price: 0.80, chance: 10 },      // 100⭐ — минимум Trophy ✓
-            { name: 'Fine Pen', price: 8.77, chance: 8 }      // 1096⭐ ✓
+            { name: 'Trophy', price: 0.80, chance: 10 },
+            { name: 'Fine Pen', price: 8.77, chance: 8 }
         ],
         items: [
-            { name: 'Mighty Arm', price: 112.2, chance: 30 },
-            { name: 'Nail Bracelet', price: 113.87, chance: 22 },
-            { name: 'Astral Shard', price: 115.25, chance: 15 },
-            { name: 'Loot Bag', price: 120.68, chance: 7 },
-            { name: 'Westside Sign', price: 98.81, chance: 1.5 },
-            { name: "Durov's Glasses", price: 94.39, chance: 0.4 },
-            { name: 'Plush Pepe', price: 6630, chance: 0.1 }
+            { name: 'Plush Pepe', price: 6630, chance: 0.1 },
+            { name: 'Durov’s Figurine', price: 1223.25, chance: 0.4 },
+            { name: 'Durov’s Cap', price: 397.80, chance: 1.5 },
+            { name: 'Mighty Arm', price: 115.00, chance: 30 },
+            { name: 'Nail Bracelet', price: 114.67, chance: 22 },
+            { name: 'Westside Sign', price: 98.83, chance: 7 },
+            { name: "Durov's Glasses", price: 91.80, chance: 0.4 }
         ]
     }
 ];
@@ -219,6 +218,9 @@ let userName = null;
 let userStars = 12500;
 let selectedQty = 1;
 let isOpening = false;
+let winLottieInstance = null;
+let spinTimeoutId = null;
+let spinVibIntervalId = null;
 
 /* ═══════════ INIT ═══════════ */
 document.addEventListener('DOMContentLoaded', init);
@@ -362,8 +364,10 @@ function renderModal() {
     track.style.transition = 'none';
     track.style.transform = 'translateX(0)';
 
+    const totalWeight = fullItems.reduce((s, x) => s + (x.chance || 0), 0) || 1;
+
     $('contentsGrid').innerHTML = gifts.map(g => {
-        const chance = g.chance || 0;
+        const chance = ((g.chance || 0) / totalWeight) * 100;
         let chanceStr;
         if (chance >= 10) chanceStr = chance.toFixed(1);
         else if (chance >= 1) chanceStr = chance.toFixed(2);
@@ -395,7 +399,7 @@ function renderModal() {
     updateOpenButton();
 }
 
-/* ═══════════ LOTTIE ═══════════ */
+/* ═══════════ LOTTIE (в списке содержимого) ═══════════ */
 const lottieInstances = {};
 
 function playLottie(el) {
@@ -455,6 +459,11 @@ function openCase() {
     userStars -= totalStars;
     localStorage.setItem('userStars', userStars.toString());
     updateBalance();
+
+    // ⚡ Сохраняем призы в инвентарь СРАЗУ, до анимации.
+    // Если игрок закроет модалку во время прокрута — предметы не потеряются.
+    wonGifts.forEach(gift => saveWinToInventory(gift));
+
     runSpinRoulette(wonGifts);
 }
 
@@ -503,19 +512,26 @@ function runSpinRoulette(wonGifts) {
     });
 
     let spinVibCount = 0;
-    const spinVibInterval = setInterval(() => { vibrate('light'); spinVibCount++; if (spinVibCount > 12) clearInterval(spinVibInterval); }, 500);
+    spinVibIntervalId = setInterval(() => {
+        vibrate('light');
+        spinVibCount++;
+        if (spinVibCount > 12) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
+    }, 500);
 
     const onTransitionEnd = (e) => {
         if (e.propertyName !== 'transform') return;
         track.removeEventListener('transitionend', onTransitionEnd);
-        clearInterval(spinVibInterval);
+        if (spinVibIntervalId) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
         vibrate('success');
         setTimeout(() => showWinResultInModal(giftsArr), 400);
     };
     track.addEventListener('transitionend', onTransitionEnd);
 
-    setTimeout(() => {
-        if (isOpening) { clearInterval(spinVibInterval); showWinResultInModal(giftsArr); }
+    spinTimeoutId = setTimeout(() => {
+        if (isOpening) {
+            if (spinVibIntervalId) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
+            showWinResultInModal(giftsArr);
+        }
     }, 8500);
 }
 
@@ -569,10 +585,18 @@ function runMultiSpin(wonGifts) {
     });
 
     let vc = 0;
-    const vi = setInterval(() => { vibrate('light'); vc++; if (vc > 12) clearInterval(vi); }, 500);
+    spinVibIntervalId = setInterval(() => {
+        vibrate('light');
+        vc++;
+        if (vc > 12) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
+    }, 500);
     const totalTime = 6500 + (count - 1) * 500 + 400;
 
-    setTimeout(() => { clearInterval(vi); vibrate('success'); showWinResultInModal(wonGifts); }, totalTime);
+    spinTimeoutId = setTimeout(() => {
+        if (spinVibIntervalId) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
+        vibrate('success');
+        showWinResultInModal(wonGifts);
+    }, totalTime);
 }
 
 /* ═══════════ ПОБЕДА ═══════════ */
@@ -581,6 +605,8 @@ function showWinResultInModal(giftsArr) {
     $('openBtnWrap').style.display = 'none';
     $('contentsSection').style.display = 'none';
     $('qtyRow').style.display = 'none';
+
+    destroyWinLottie();
 
     if (giftsArr.length > 1) {
         const totalStars = giftsArr.reduce((s, g) => s + Math.round(g.price * TON_TO_STARS), 0);
@@ -604,15 +630,68 @@ function showWinResultInModal(giftsArr) {
         `;
     } else {
         const gift = giftsArr[0];
-        $('modalWinImg').src = getGiftImage(gift.name, gift.price);
-        $('modalWinImg').onerror = function() { this.onerror = null; this.src = GIFT_FALLBACK; };
-        $('modalWinName').textContent = gift.name;
-        $('modalWinValue').querySelector('span').textContent = formatStars(Math.round(gift.price * TON_TO_STARS));
+        const lottieUrl = getGiftLottie(gift.name, gift.price);
+
+        $('modalWin').innerHTML = `
+            <div class="modal-win-badge">Вы выиграли!</div>
+            <div class="modal-win-media" id="modalWinMedia">
+                <img class="modal-win-img" id="modalWinImg" src="${getGiftImage(gift.name, gift.price)}" alt="" onerror="this.onerror=null;this.src='${GIFT_FALLBACK}'">
+            </div>
+            <div class="modal-win-name" id="modalWinName">${escapeHtml(gift.name)}</div>
+            <div class="modal-win-value" id="modalWinValue">
+                <img src="${STAR_ICON}" alt=""><span>${formatStars(Math.round(gift.price * TON_TO_STARS))}</span>
+            </div>
+            <div class="modal-win-btns">
+                <button class="modal-win-btn" onclick="closeModalAndReset()">Закрыть</button>
+                <button class="modal-win-btn primary" onclick="openAgain()">Ещё раз</button>
+            </div>
+        `;
+
+        if (lottieUrl) {
+            playWinLottie(lottieUrl, gift);
+        }
     }
 
     $('modalWin').style.display = 'block';
-    giftsArr.forEach(gift => saveWinToInventory(gift));
+    // Призы уже сохранены в openCase() — повторно не сохраняем.
     setOpening(false);
+}
+
+/* ═══════════ LOTTIE В МОДАЛКЕ ПОБЕДЫ ═══════════ */
+function playWinLottie(url, gift) {
+    const media = $('modalWinMedia');
+    if (!media) return;
+
+    fetch(url, { method: 'HEAD' })
+        .then(r => {
+            if (!r.ok) return;
+            const img = $('modalWinImg');
+            if (img) img.style.visibility = 'hidden';
+
+            const box = document.createElement('div');
+            box.className = 'modal-win-lottie';
+            media.appendChild(box);
+
+            winLottieInstance = lottie.loadAnimation({
+                container: box,
+                renderer: 'svg',
+                loop: true,
+                autoplay: true,
+                path: url
+            });
+        })
+        .catch(() => {});
+}
+
+function destroyWinLottie() {
+    if (winLottieInstance) {
+        try { winLottieInstance.destroy(); } catch(e) {}
+        winLottieInstance = null;
+    }
+    const old = document.querySelector('.modal-win-lottie');
+    if (old) old.remove();
+    const img = $('modalWinImg');
+    if (img) img.style.visibility = 'visible';
 }
 
 /* ═══════════ СОХРАНЕНИЕ В ИНВЕНТАРЬ ═══════════ */
@@ -624,7 +703,6 @@ function saveWinToInventory(gift) {
         if (!Array.isArray(inventory)) inventory = [];
     } catch (e) { inventory = []; }
 
-    /* Проверяем минимальную цену */
     const stars = Math.round(gift.price * TON_TO_STARS);
     const minPrice = MIN_PRICES[gift.name] || 0;
     const finalStars = Math.max(stars, minPrice);
@@ -642,29 +720,39 @@ function saveWinToInventory(gift) {
 }
 
 /* ═══════════ МОДАЛКА ═══════════ */
-function closeModalAndReset() { closeModal(); }
+function closeModalAndReset() {
+    destroyWinLottie();
+    closeModal();
+}
 
 function openAgain() {
+    // Очищаем таймеры и прошлую Lottie перед новым раундом
+    if (spinTimeoutId) { clearTimeout(spinTimeoutId); spinTimeoutId = null; }
+    if (spinVibIntervalId) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
+    isOpening = false;
+    destroyWinLottie();
+
     if (!currentCase) return;
-    $('modalWin').innerHTML = `
-        <div class="modal-win-badge">Вы выиграли!</div>
-        <img class="modal-win-img" id="modalWinImg" src="${GIFT_FALLBACK}">
-        <div class="modal-win-name" id="modalWinName"></div>
-        <div class="modal-win-value" id="modalWinValue">
-            <img src="${STAR_ICON}" alt=""><span>0</span>
-        </div>
-        <div class="modal-win-btns">
-            <button class="modal-win-btn" onclick="closeModalAndReset()">Закрыть</button>
-            <button class="modal-win-btn primary" onclick="openAgain()">Ещё раз</button>
-        </div>
-    `;
+    $('modalWin').innerHTML = '';
     $('modalWin').style.display = 'none';
     renderModal();
 }
 
 function closeModal() {
+    // Если крутится — останавливаем анимацию и очищаем таймеры.
+    // Призы УЖЕ сохранены в openCase(), терять нечего.
+    if (spinTimeoutId) { clearTimeout(spinTimeoutId); spinTimeoutId = null; }
+    if (spinVibIntervalId) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
+    isOpening = false;
+
+    destroyWinLottie();
     $('caseModal').classList.remove('open');
     currentCase = null;
+
+    // Возвращаем кнопки в нормальное состояние
+    document.querySelectorAll('.qty-btn').forEach(b => b.classList.remove('locked'));
+    const btn = $('openBtn');
+    if (btn) btn.disabled = false;
 }
 
 $('caseModal') && $('caseModal').addEventListener('click', e => {
@@ -682,6 +770,12 @@ function setOpening(v) {
 
 /* ═══════════ УТИЛИТЫ ═══════════ */
 function formatStars(stars) { return Math.round(stars).toLocaleString('ru-RU'); }
+
+function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
 
 function vibrate(style) {
     try {

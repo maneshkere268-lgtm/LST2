@@ -136,11 +136,14 @@ const GIFTS = [
 ];
 
 /* Специальные (наши) предметы */
+/* Баг-фикс: цены синхронизированы с MIN_PRICES из index.js — раньше
+   Bear/Gift/Cake, выигранные через крафт, стоили не столько же,
+   сколько такие же предметы из кейсов. */
 const SPECIAL_GIFTS = [
     { name: 'Trophy', price: 100, image: '../trophy.png' },
-    { name: 'Bear', price: 20, image: '../bear.png' },
-    { name: 'Gift', price: 35, image: '../gift.png' },
-    { name: 'Cake', price: 60, image: '../cake.png' }
+    { name: 'Bear', price: 15, image: '../bear.png' },
+    { name: 'Gift', price: 25, image: '../gift.png' },
+    { name: 'Cake', price: 50, image: '../cake.png' }
 ];
 
 /* Все предметы вместе, отсортированные по цене (убывание) */

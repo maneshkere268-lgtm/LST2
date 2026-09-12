@@ -5,6 +5,7 @@ const STAR_ICON = 'star.png';
 const GIFT_FALLBACK = 'star.png';
 
 // Предметы, которые лежат в корне проекта (bear.png, gift.png, cake.png, trophy.png)
+// Для них Lottie не используется — только статичная картинка.
 const ROOT_ITEMS = new Set(['Bear', 'Gift', 'Cake', 'Trophy']);
 
 /* ═══════════════════════════════════════════════════════════
@@ -27,6 +28,7 @@ function encodePathPart(str) {
 }
 
 function getGiftImage(name, price) {
+    // Предметы из корня проекта (Bear, Gift, Cake, Trophy)
     if (ROOT_ITEMS.has(name) || price < 3) {
         const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '');
         return '../' + slug + '.png';
@@ -41,6 +43,7 @@ function getGiftImage(name, price) {
 }
 
 function getGiftLottie(name, price) {
+    // Для корневых предметов и дешёвых — Lottie нет
     if (ROOT_ITEMS.has(name) || price < 3) return null;
     const modelMatch = name.match(/^(.+?)\s*\((.+)\)\s*$/);
     if (modelMatch) {
@@ -215,12 +218,10 @@ const CASES = [
 let currentCase = null;
 let userId = null;
 let userName = null;
-let userStars = 12500;
+let userStars = 500;
 let selectedQty = 1;
 let isOpening = false;
-let winLottieInstance = null;
-let spinTimeoutId = null;
-let spinVibIntervalId = null;
+let winLottieInstance = null; // Lottie в модалке победы
 
 /* ═══════════ INIT ═══════════ */
 document.addEventListener('DOMContentLoaded', init);
@@ -459,11 +460,6 @@ function openCase() {
     userStars -= totalStars;
     localStorage.setItem('userStars', userStars.toString());
     updateBalance();
-
-    // ⚡ Сохраняем призы в инвентарь СРАЗУ, до анимации.
-    // Если игрок закроет модалку во время прокрута — предметы не потеряются.
-    wonGifts.forEach(gift => saveWinToInventory(gift));
-
     runSpinRoulette(wonGifts);
 }
 
@@ -512,26 +508,19 @@ function runSpinRoulette(wonGifts) {
     });
 
     let spinVibCount = 0;
-    spinVibIntervalId = setInterval(() => {
-        vibrate('light');
-        spinVibCount++;
-        if (spinVibCount > 12) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
-    }, 500);
+    const spinVibInterval = setInterval(() => { vibrate('light'); spinVibCount++; if (spinVibCount > 12) clearInterval(spinVibInterval); }, 500);
 
     const onTransitionEnd = (e) => {
         if (e.propertyName !== 'transform') return;
         track.removeEventListener('transitionend', onTransitionEnd);
-        if (spinVibIntervalId) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
+        clearInterval(spinVibInterval);
         vibrate('success');
         setTimeout(() => showWinResultInModal(giftsArr), 400);
     };
     track.addEventListener('transitionend', onTransitionEnd);
 
-    spinTimeoutId = setTimeout(() => {
-        if (isOpening) {
-            if (spinVibIntervalId) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
-            showWinResultInModal(giftsArr);
-        }
+    setTimeout(() => {
+        if (isOpening) { clearInterval(spinVibInterval); showWinResultInModal(giftsArr); }
     }, 8500);
 }
 
@@ -585,18 +574,10 @@ function runMultiSpin(wonGifts) {
     });
 
     let vc = 0;
-    spinVibIntervalId = setInterval(() => {
-        vibrate('light');
-        vc++;
-        if (vc > 12) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
-    }, 500);
+    const vi = setInterval(() => { vibrate('light'); vc++; if (vc > 12) clearInterval(vi); }, 500);
     const totalTime = 6500 + (count - 1) * 500 + 400;
 
-    spinTimeoutId = setTimeout(() => {
-        if (spinVibIntervalId) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
-        vibrate('success');
-        showWinResultInModal(wonGifts);
-    }, totalTime);
+    setTimeout(() => { clearInterval(vi); vibrate('success'); showWinResultInModal(wonGifts); }, totalTime);
 }
 
 /* ═══════════ ПОБЕДА ═══════════ */
@@ -606,9 +587,11 @@ function showWinResultInModal(giftsArr) {
     $('contentsSection').style.display = 'none';
     $('qtyRow').style.display = 'none';
 
+    // Убиваем прошлую Lottie (если была)
     destroyWinLottie();
 
     if (giftsArr.length > 1) {
+        // Мультивыигрыш — статичные картинки, без Lottie
         const totalStars = giftsArr.reduce((s, g) => s + Math.round(g.price * TON_TO_STARS), 0);
         $('modalWin').innerHTML = `
             <div style="text-align:center;padding:10px 0;">
@@ -629,16 +612,18 @@ function showWinResultInModal(giftsArr) {
             </div>
         `;
     } else {
+        // Одиночный выигрыш — показываем Lottie (если есть), иначе статичную картинку
         const gift = giftsArr[0];
         const lottieUrl = getGiftLottie(gift.name, gift.price);
 
+        // Собираем HTML с контейнером под Lottie
         $('modalWin').innerHTML = `
             <div class="modal-win-badge">Вы выиграли!</div>
             <div class="modal-win-media" id="modalWinMedia">
                 <img class="modal-win-img" id="modalWinImg" src="${getGiftImage(gift.name, gift.price)}" alt="" onerror="this.onerror=null;this.src='${GIFT_FALLBACK}'">
             </div>
             <div class="modal-win-name" id="modalWinName">${escapeHtml(gift.name)}</div>
-            <div class="modal-win-value" id="modalWinValue">
+            <div class="modal-win-value">
                 <img src="${STAR_ICON}" alt=""><span>${formatStars(Math.round(gift.price * TON_TO_STARS))}</span>
             </div>
             <div class="modal-win-btns">
@@ -647,13 +632,14 @@ function showWinResultInModal(giftsArr) {
             </div>
         `;
 
+        // Если у предмета есть Lottie — запускаем анимацию поверх картинки
         if (lottieUrl) {
             playWinLottie(lottieUrl, gift);
         }
     }
 
     $('modalWin').style.display = 'block';
-    // Призы уже сохранены в openCase() — повторно не сохраняем.
+    giftsArr.forEach(gift => saveWinToInventory(gift));
     setOpening(false);
 }
 
@@ -662,12 +648,14 @@ function playWinLottie(url, gift) {
     const media = $('modalWinMedia');
     if (!media) return;
 
+    // Проверяем, что JSON доступен
     fetch(url, { method: 'HEAD' })
         .then(r => {
-            if (!r.ok) return;
+            if (!r.ok) return; // оставляем статичную картинку
             const img = $('modalWinImg');
-            if (img) img.style.visibility = 'hidden';
+            if (img) img.style.visibility = 'hidden'; // прячем img, но оставляем место
 
+            // Создаём контейнер под Lottie
             const box = document.createElement('div');
             box.className = 'modal-win-lottie';
             media.appendChild(box);
@@ -680,7 +668,7 @@ function playWinLottie(url, gift) {
                 path: url
             });
         })
-        .catch(() => {});
+        .catch(() => { /* оставляем статичную картинку */ });
 }
 
 function destroyWinLottie() {
@@ -726,12 +714,7 @@ function closeModalAndReset() {
 }
 
 function openAgain() {
-    // Очищаем таймеры и прошлую Lottie перед новым раундом
-    if (spinTimeoutId) { clearTimeout(spinTimeoutId); spinTimeoutId = null; }
-    if (spinVibIntervalId) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
-    isOpening = false;
     destroyWinLottie();
-
     if (!currentCase) return;
     $('modalWin').innerHTML = '';
     $('modalWin').style.display = 'none';
@@ -739,20 +722,9 @@ function openAgain() {
 }
 
 function closeModal() {
-    // Если крутится — останавливаем анимацию и очищаем таймеры.
-    // Призы УЖЕ сохранены в openCase(), терять нечего.
-    if (spinTimeoutId) { clearTimeout(spinTimeoutId); spinTimeoutId = null; }
-    if (spinVibIntervalId) { clearInterval(spinVibIntervalId); spinVibIntervalId = null; }
-    isOpening = false;
-
     destroyWinLottie();
     $('caseModal').classList.remove('open');
     currentCase = null;
-
-    // Возвращаем кнопки в нормальное состояние
-    document.querySelectorAll('.qty-btn').forEach(b => b.classList.remove('locked'));
-    const btn = $('openBtn');
-    if (btn) btn.disabled = false;
 }
 
 $('caseModal') && $('caseModal').addEventListener('click', e => {

@@ -222,6 +222,7 @@ let userStars = 500;
 let selectedQty = 1;
 let isOpening = false;
 let winLottieInstance = null; // Lottie в модалке победы
+let currentWinItems = []; // предметы текущего дропа (с id из инвентаря) — для Продать/Апгрейд
 
 /* ═══════════ INIT ═══════════ */
 document.addEventListener('DOMContentLoaded', init);
@@ -240,6 +241,7 @@ function init() {
     $('userName').textContent = userName;
     renderCases();
     updateBalance();
+    checkAndGrantStarterBonus();
 
     document.addEventListener('click', e => {
         const el = e.target.closest('button, .case, .qty-btn, .modal-win-btn');
@@ -249,6 +251,23 @@ function init() {
 
 function updateBalance() {
     $('balanceDisplay').textContent = formatStars(userStars);
+}
+
+/* ═══════════ СТАРТОВЫЙ БОНУС (баланс 0 + пустой инвентарь) ═══════════ */
+function getInventory() {
+    try {
+        const inv = JSON.parse(localStorage.getItem('userInventory') || '[]');
+        return Array.isArray(inv) ? inv : [];
+    } catch (e) { return []; }
+}
+
+function checkAndGrantStarterBonus() {
+    if (userStars <= 0 && getInventory().length === 0) {
+        userStars = 1000;
+        localStorage.setItem('userStars', userStars.toString());
+        updateBalance();
+        showToast('Начислено 1000 звёзд для старта!', 'ok');
+    }
 }
 
 /* ═══════════ ПРЕВЬЮ КЕЙСА ═══════════ */
@@ -460,6 +479,7 @@ function openCase() {
     userStars -= totalStars;
     localStorage.setItem('userStars', userStars.toString());
     updateBalance();
+    checkAndGrantStarterBonus();
     runSpinRoulette(wonGifts);
 }
 
@@ -595,19 +615,20 @@ function showWinResultInModal(giftsArr) {
         const totalStars = giftsArr.reduce((s, g) => s + Math.round(g.price * TON_TO_STARS), 0);
         $('modalWin').innerHTML = `
             <div style="text-align:center;padding:10px 0;">
-                <div style="font-size:14px;color:#4ADE80;margin-bottom:12px;">Вы выиграли ${giftsArr.length} подарков!</div>
+                <div style="font-size:14px;color:var(--jade);margin-bottom:12px;font-weight:700;">Вы выиграли ${giftsArr.length} подарков!</div>
                 <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;">
                     ${giftsArr.map(g => `
-                        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:8px;width:80px;text-align:center;">
+                        <div style="background:var(--panel-2);border:1px solid var(--hairline);border-radius:14px;padding:8px;width:80px;text-align:center;">
                             <img src="${getGiftImage(g.name, g.price)}" style="width:50px;height:50px;object-fit:contain;" onerror="this.onerror=null;this.src='${GIFT_FALLBACK}'">
-                            <div style="font-size:11px;color:var(--star);margin-top:4px;font-weight:800;">${formatStars(Math.round(g.price * TON_TO_STARS))}</div>
+                            <div style="font-size:11px;color:var(--amber-2);margin-top:4px;font-weight:800;">${formatStars(Math.round(g.price * TON_TO_STARS))}</div>
                         </div>
                     `).join('')}
                 </div>
-                <div style="color:var(--star);font-size:16px;font-weight:800;">Итого: ${formatStars(totalStars)}</div>
-                <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;">
-                    <button onclick="openAgain()" style="flex:1;max-width:140px;padding:10px;background:#3b82f6;border:none;border-radius:10px;color:white;font-size:14px;cursor:pointer;">Ещё раз</button>
-                    <button onclick="closeModalAndReset()" style="flex:1;max-width:140px;padding:10px;background:rgba(255,255,255,0.08);border:none;border-radius:10px;color:white;font-size:14px;cursor:pointer;">Закрыть</button>
+                <div style="color:var(--amber-2);font-size:16px;font-weight:800;">Итого: ${formatStars(totalStars)}</div>
+                <div class="modal-win-btns">
+                    <button class="modal-win-btn sell" onclick="sellCurrentWin()">Продать</button>
+                    <button class="modal-win-btn upgrade" onclick="upgradeCurrentWin()">Апгрейд</button>
+                    <button class="modal-win-btn" onclick="closeModalAndReset()">Назад</button>
                 </div>
             </div>
         `;
@@ -627,8 +648,9 @@ function showWinResultInModal(giftsArr) {
                 <img src="${STAR_ICON}" alt=""><span>${formatStars(Math.round(gift.price * TON_TO_STARS))}</span>
             </div>
             <div class="modal-win-btns">
-                <button class="modal-win-btn" onclick="closeModalAndReset()">Закрыть</button>
-                <button class="modal-win-btn primary" onclick="openAgain()">Ещё раз</button>
+                <button class="modal-win-btn" onclick="sellCurrentWin()" style="background:#4ADE80;color:#0A0D14;font-weight:700;">Продать</button>
+                <button class="modal-win-btn" onclick="upgradeCurrentWin()">Апгрейд</button>
+                <button class="modal-win-btn" onclick="closeModalAndReset()">Назад</button>
             </div>
         `;
 
@@ -639,7 +661,7 @@ function showWinResultInModal(giftsArr) {
     }
 
     $('modalWin').style.display = 'block';
-    giftsArr.forEach(gift => saveWinToInventory(gift));
+    currentWinItems = giftsArr.map(gift => saveWinToInventory(gift));
     setOpening(false);
 }
 
@@ -695,22 +717,57 @@ function saveWinToInventory(gift) {
     const minPrice = MIN_PRICES[gift.name] || 0;
     const finalStars = Math.max(stars, minPrice);
 
-    inventory.push({
+    const savedItem = {
         id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         name: gift.name,
         price: gift.price,
         stars: finalStars,
         image: getGiftImage(gift.name, gift.price),
         timestamp: Date.now()
-    });
+    };
 
+    inventory.push(savedItem);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
+    return savedItem;
 }
 
 /* ═══════════ МОДАЛКА ═══════════ */
 function closeModalAndReset() {
     destroyWinLottie();
     closeModal();
+}
+
+/* ═══════════ ПРОДАТЬ ТЕКУЩИЙ ДРОП ═══════════ */
+function sellCurrentWin() {
+    if (!currentWinItems.length) { closeModalAndReset(); return; }
+
+    const STORAGE_KEY = 'userInventory';
+    let inventory = [];
+    try {
+        inventory = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        if (!Array.isArray(inventory)) inventory = [];
+    } catch (e) { inventory = []; }
+
+    const soldIds = new Set(currentWinItems.map(it => it.id));
+    const totalStars = currentWinItems.reduce((s, it) => s + it.stars, 0);
+
+    inventory = inventory.filter(it => !soldIds.has(it.id));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
+
+    userStars += totalStars;
+    localStorage.setItem('userStars', userStars.toString());
+    updateBalance();
+
+    showToast(`Продано за ${formatStars(totalStars)} звёзд`, 'ok');
+    currentWinItems = [];
+    closeModalAndReset();
+}
+
+/* ═══════════ ОТПРАВИТЬ ТЕКУЩИЙ ДРОП НА АПГРЕЙД ═══════════ */
+function upgradeCurrentWin() {
+    destroyWinLottie();
+    closeModal();
+    location.href = 'upgrades.html';
 }
 
 function openAgain() {
@@ -768,5 +825,7 @@ window.openCase = openCase;
 window.closeModalAndReset = closeModalAndReset;
 window.openAgain = openAgain;
 window.closeModal = closeModal;
+window.sellCurrentWin = sellCurrentWin;
+window.upgradeCurrentWin = upgradeCurrentWin;
 window.playLottie = playLottie;
 window.stopLottie = stopLottie;

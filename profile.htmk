@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0B0D12">
+    <title>LootStar — Профиль</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <!-- Telegram -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Общие модули -->
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+    <script src="gifts.js"></script>
+    <script src="firebase.js"></script>
+
+    <!-- Lottie -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <img src="logo.png" alt="LootStar">
+            <h1>LootStar</h1>
+        </div>
+        <div class="user-info">
+            <div class="user-balances">
+                <div class="user-balance star">
+                    <img src="star.png" alt="⭐">
+                    <p id="balanceDisplay">15</p>
+                </div>
+            </div>
+            <div class="user-profile" onclick="location.href='profile.html'">
+                <img src="star.png" alt="user" id="userAvatar">
+                <p id="userName">Игрок</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="cases-title">ПРОФИЛЬ</div>
+
+        <!-- Статистика -->
+        <div class="profile-stats" style="margin-bottom:18px;">
+            <div class="profile-stat">
+                <div class="profile-stat-val" id="statTurnover">
+                    <img src="star.png" alt="">0
+                </div>
+                <div style="font-size:11px;color:var(--text-2);">Оборот</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-val" id="statItems">0</div>
+                <div style="font-size:11px;color:var(--text-2);">Подарков</div>
+            </div>
+        </div>
+
+        <div class="cases-title" style="font-size:17px;">МОИ ПОДАРКИ</div>
+        <div class="contents-grid" id="inventoryGrid"></div>
+    </main>
+
+    <nav class="bnav">
+        <button data-page="games" onclick="location.href='games.html'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="6" width="20" height="12" rx="3"></rect>
+                <line x1="6" y1="12" x2="10" y2="12"></line>
+                <line x1="8" y1="10" x2="8" y2="14"></line>
+                <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"></circle>
+                <circle cx="18" cy="12" r="1" fill="currentColor" stroke="none"></circle>
+            </svg>
+            <span>Игры</span>
+        </button>
+        <button data-page="cases" onclick="location.href='index.html'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+            </svg>
+            <span>Кейсы</span>
+        </button>
+        <button data-page="upgrades" onclick="location.href='upgrades.html'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 19V5"></path>
+                <path d="M5 12l7-7 7 7"></path>
+            </svg>
+            <span>Апгрейд</span>
+        </button>
+        <button data-page="profile" class="active" onclick="location.href='profile.html'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span>Профиль</span>
+        </button>
+    </nav>
+
+    <!-- Модалка вывода -->
+    <div class="modal-overlay" id="withdrawModal">
+        <div class="modal">
+            <div class="modal-scroll">
+                <div class="modal-handle"></div>
+                <div id="withdrawContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- index.js — здесь уже есть всё: getInventory, openWithdrawModal, confirmWithdraw -->
+    <script src="index.js"></script>
+
+    <!-- Локальный рендер инвентаря -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderProfileInventory();
+            updateProfileStats();
+            updateInventoryBadges();
+
+            window.addEventListener('firebaseDataLoaded', () => {
+                renderProfileInventory();
+                updateProfileStats();
+            });
+        });
+
+        function renderProfileInventory() {
+            const grid = document.getElementById('inventoryGrid');
+            if (!grid) return;
+
+            const inv = getInventory();
+
+            if (!inv.length) {
+                grid.innerHTML = `
+                    <div style="grid-column:1/-1;text-align:center;color:var(--text-3);padding:40px 0;font-size:13px;">
+                        Инвентарь пуст — открой кейс
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = inv.map(item => `
+                <div class="content-item" data-gift-id="${item.id}" style="position:relative;">
+                    <div class="content-item-name">${window.escapeHtml(item.name)}</div>
+                    <div class="content-item-media">
+                        <img src="${item.image}" alt="" onerror="this.onerror=null;this.src='${window.GIFT_FALLBACK}'">
+                    </div>
+                    <div class="content-price">
+                        <img src="${window.STAR_ICON}" alt=""> ${window.formatStars(item.stars)}
+                    </div>
+                    <button class="withdraw-item-btn" onclick="openWithdrawModal('${item.id}')">Вывести</button>
+                </div>
+            `).join('');
+
+            updateInventoryBadges();
+        }
+
+        function updateProfileStats() {
+            const turnoverEl = document.getElementById('statTurnover');
+            const itemsEl = document.getElementById('statItems');
+            if (turnoverEl) {
+                turnoverEl.innerHTML = `<img src="${window.STAR_ICON}" alt="">${window.formatStars(getTurnover())}`;
+            }
+            if (itemsEl) {
+                itemsEl.textContent = getInventory().length;
+            }
+        }
+
+        // После вывода обновляем список
+        const _origConfirmWithdraw = window.confirmWithdraw;
+        window.confirmWithdraw = function () {
+            _origConfirmWithdraw();
+            renderProfileInventory();
+            updateProfileStats();
+        };
+    </script>
+</body>
+</html>

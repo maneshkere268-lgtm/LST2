@@ -57,12 +57,19 @@ header{display:flex;align-items:center;justify-content:space-between;max-width:4
 .inv-card-btn-upgrade:hover{opacity:.9}
 .inv-card-btn:active{transform:scale(.95)}
 
+/* КНОПКА ВЫВОДА */
+.inv-card-btn-withdraw{background:linear-gradient(135deg,var(--primary),#C9971A);color:#fff}
+.inv-card-btn-withdraw:hover{opacity:.9}
+.inv-card-btn-withdraw.locked{background:rgba(255,255,255,.05);color:rgba(255,255,255,.3);cursor:not-allowed;opacity:1}
+
 .inv-card-price.rare{color:#B0B0B6}
 .inv-card-price.epic{color:#D8B65A}
 .inv-card-price.legendary{color:var(--gold)}
 .inv-empty{text-align:center;padding:60px 20px;color:var(--text-2);background:rgba(255,255,255,.02);border-radius:16px;border:1px dashed rgba(245,197,24,.22)}
 .inv-empty-icon{font-size:48px;margin-bottom:12px;opacity:.4}
 .inv-empty-text{font-size:14px;font-weight:600}
+
+.inv-card-ready-badge{position:absolute;top:6px;right:6px;background:linear-gradient(135deg,#4ADE80,#22C55E);color:#06140E;font-size:8px;font-weight:800;padding:2px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.3px;z-index:3}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(12px);z-index:200;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;display:flex;align-items:flex-end;justify-content:center}
 .modal-overlay.open{opacity:1;visibility:visible}
@@ -112,3 +119,41 @@ header{display:flex;align-items:center;justify-content:space-between;max-width:4
 ::-webkit-scrollbar-track{background:rgba(255,255,255,.02);border-radius:3px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.25)}
+
+/* ═══════════════════════════════════════════════════════════
+ * ВЫВОД ПОДАРКОВ
+ * ═══════════════════════════════════════════════════════════ */
+#withdrawContent{width:100%;display:flex;flex-direction:column;align-items:center}
+
+.withdraw-title{font-size:20px;font-weight:800;text-align:center;margin-bottom:16px;color:#fff}
+
+.withdraw-gift{display:flex;flex-direction:column;align-items:center;margin-bottom:16px}
+.withdraw-gift img{width:100px;height:100px;object-fit:contain;filter:drop-shadow(0 8px 20px rgba(0,0,0,.5))}
+.withdraw-gift-name{font-size:14px;font-weight:700;margin-top:8px;color:#fff}
+.withdraw-gift-price{display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:6px 12px 6px 8px;background:rgba(245,197,24,.12);border:1px solid rgba(245,197,24,.25);border-radius:10px;font-size:13px;font-weight:800;color:var(--star)}
+.withdraw-gift-price img{width:14px;height:14px;object-fit:contain;display:block}
+
+.withdraw-progress-text{font-size:13px;color:var(--text-2);text-align:center;margin-bottom:10px}
+.withdraw-progress-text b{color:var(--star)}
+
+.withdraw-progress-bar{height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden;margin-bottom:6px;width:100%}
+.withdraw-progress-bar > div{height:100%;background:linear-gradient(90deg,#F5C518,#C9971A);transition:width .4s ease}
+.withdraw-progress-sub{font-size:12px;color:var(--text-2);text-align:center;margin-bottom:16px}
+
+.withdraw-info{font-size:14px;text-align:center;margin-bottom:10px;line-height:1.5;color:#fff}
+.withdraw-info b{color:var(--star)}
+
+.withdraw-info-sub{font-size:12px;color:var(--text-2);text-align:center;margin-bottom:14px;line-height:1.5}
+.withdraw-info-sub b{color:#fff}
+
+.withdraw-refs-bar{height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden;margin:10px 0 6px;width:100%}
+.withdraw-refs-bar > div{height:100%;background:linear-gradient(90deg,#F5C518,#C9971A);transition:width .4s ease}
+.withdraw-refs-sub{font-size:12px;color:var(--text-2);text-align:center;margin-bottom:16px}
+
+.withdraw-btn{width:100%;height:52px;border-radius:16px;border:none;background:linear-gradient(135deg,var(--primary),#C9971A);color:#fff;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px;transition:transform .2s,box-shadow .2s;box-shadow:0 6px 20px rgba(245,197,24,.3)}
+.withdraw-btn:active{transform:scale(.97)}
+.withdraw-btn.secondary{background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(245,197,24,.26);box-shadow:none}
+.withdraw-btn.disabled{background:rgba(255,255,255,.05);color:rgba(255,255,255,.3);cursor:not-allowed;box-shadow:none}
+
+.withdraw-close{width:100%;padding:12px;border-radius:12px;background:transparent;color:var(--text-2);border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}
+.withdraw-close:hover{color:#fff}

@@ -115,7 +115,7 @@ window.GIFTS = [
     { name: 'Money Pot',        price: 555,      image: 'https://cdn.changes.tg/gifts/models/Money%20Pot/png/Original.png' },
     { name: 'Pretty Posy',      price: 587.5,    image: 'https://cdn.changes.tg/gifts/models/Pretty%20Posy/png/Original.png' },
     { name: 'Airplane',         price: 787500,   image: 'https://cdn.changes.tg/gifts/models/Airplane/png/Original.png' },
-    { name: "Khabib's Papakha", price: 24250,    image: "https://cdn.changes.tg/gifts/models/Khabib's%20Papakha/png/Original.png" },
+    { name: "Khabib's Papakha", price: 24250,    image: "https://cdn.changes.tg/gifts/models/Khabib's%20Papakha/png/Black%20Diamond.png" },
     { name: 'UFC box',          price: 13911.25, image: 'https://cdn.changes.tg/gifts/models/UFC%20box/png/Original.png' },
     { name: 'UFC Strike',       price: 1941.25,  image: 'https://cdn.changes.tg/gifts/models/UFC%20Strike/png/Original.png' },
     { name: 'Victory Medal',    price: 561.25,   image: 'https://cdn.changes.tg/gifts/models/Victory%20Medal/png/Original.png' },

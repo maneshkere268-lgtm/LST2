@@ -1,113 +1,238 @@
-// index.js — Кейсы (быстрое открытие + полная блокировка UI + 4/5 сек анимация)
+// index.js — Кейсы (полная блокировка UI + 4/5 сек анимация)
 const $ = id => document.getElementById(id);
 
-/* ═══════════ КЕЙСЫ ═══════════ */
+/* ═══════════════════════════════════════════════════════════
+ * ЛОКАЛЬНЫЕ КАРТИНКИ (ищутся в корне проекта)
+ * ═══════════════════════════════════════════════════════════ */
+const LOCAL_IMAGE_NAMES = new Set(['Mask', "Durov's Figurine", 'Airplane']);
+
+/* ═══════════════════════════════════════════════════════════
+ * КЕЙСЫ
+ * Цены кейсов и предметов — в TON (1 TON = 125 ⭐)
+ * Шансы подогнаны так, чтобы EV/цена был в диапазоне 0.4–1.0
+ * ═══════════════════════════════════════════════════════════ */
 const CASES = [
+    /* ═══ 1. Starter Case — 0.35 TON = 44 ⭐ — EV/цена = 0.75× ═══ */
     { id: 1, name: 'Starter Case', price: 0.35, color: 'g-dark',
-      cheapPool: [{ name: 'Bear', price: 0.12, chance: 15 }, { name: 'Gift', price: 0.20, chance: 10 }],
+      cheapPool: [
+        { name: 'Bear', price: 0.12,  chance: 50 },
+        { name: 'Gift', price: 0.20,  chance: 45 },
+        { name: 'Cake', price: 0.40,  chance: 1 }
+      ],
       items: [
-        { name: 'Record Player', price: 12.62, chance: 0.1 },
-        { name: 'Jester Hat', price: 4.03, chance: 2.4 },
-        { name: 'Lol Pop', price: 3.94, chance: 0.5 },
-        { name: 'Fine Pen', price: 8.77, chance: 0.1 }
+        { name: 'Lol Pop',     price: 3.94,  chance: 1 },
+        { name: 'Snake Box',   price: 3.99,  chance: 1 },
+        { name: 'Jester Hat',  price: 4.03,  chance: 1 },
+        { name: 'Lunar Snake', price: 4.00,  chance: 1 }
       ] },
+
+    /* ═══ 2. Sweet Case — 1 TON = 125 ⭐ — EV/цена = 0.78× ═══ */
     { id: 2, name: 'Sweet Case', price: 1, color: 'g-red',
-      cheapPool: [{ name: 'Bear', price: 0.12, chance: 15 }, { name: 'Gift', price: 0.20, chance: 10 }],
+      cheapPool: [
+        { name: 'Trophy',        price: 0.80,  chance: 95 },
+        { name: 'Cookie Heart',  price: 4.69,  chance: 0.6 },
+        { name: 'Happy Brownie', price: 4.34,  chance: 0.6 }
+      ],
       items: [
-        { name: 'B-Day Candle', price: 4.79, chance: 0.1 },
-        { name: 'Cookie Heart', price: 4.69, chance: 0.3 },
-        { name: 'Happy Brownie', price: 4.34, chance: 50 },
-        { name: 'Ginger Cookie', price: 4.24, chance: 2.6 }
+        { name: 'Ginger Cookie',  price: 4.24, chance: 0.6 },
+        { name: 'Party Sparkler', price: 4.29, chance: 0.6 },
+        { name: 'Fresh Socks',    price: 4.35, chance: 0.6 },
+        { name: 'Spiced Wine',    price: 4.36, chance: 0.6 },
+        { name: 'Ice Cream',      price: 4.36, chance: 0.6 },
+        { name: 'B-Day Candle',   price: 4.79, chance: 0.8 }
       ] },
+
+    /* ═══ 3. Xmas Case — 2 TON = 250 ⭐ — EV/цена = 0.40× ═══ */
     { id: 3, name: 'Xmas Case', price: 2, color: 'g-green',
-      cheapPool: [{ name: 'Gift', price: 0.20, chance: 12 }, { name: 'Cake', price: 0.40, chance: 10 }],
+      cheapPool: [
+        { name: 'Trophy',        price: 0.80,  chance: 95 },
+        { name: 'Xmas Stocking', price: 3.92,  chance: 0.5 },
+        { name: 'Santa Hat',     price: 4.11,  chance: 0.5 },
+        { name: 'Snow Mittens',  price: 4.48,  chance: 0.5 },
+        { name: 'Snow Globe',    price: 4.58,  chance: 0.5 }
+      ],
       items: [
-        { name: 'Jingle Bells', price: 8.06, chance: 0.5 },
-        { name: 'Sleigh Bell', price: 6.91, chance: 1.5 },
-        { name: 'Snow Globe', price: 4.58, chance: 3 },
-        { name: 'Snow Mittens', price: 4.48, chance: 15 },
-        { name: 'Santa Hat', price: 4.11, chance: 25 },
-        { name: 'Xmas Stocking', price: 3.92, chance: 30 }
+        { name: 'B-Day Candle',   price: 4.79,  chance: 0.5 },
+        { name: 'Bow Tie',        price: 4.90,  chance: 0.5 },
+        { name: 'Winter Wreath',  price: 4.01,  chance: 0.5 },
+        { name: 'Candy Cane',     price: 4.01,  chance: 0.5 },
+        { name: 'Eternal Candle', price: 5.90,  chance: 0.3 },
+        { name: 'Sleigh Bell',    price: 6.91,  chance: 0.4 },
+        { name: 'Jingle Bells',   price: 8.06,  chance: 0.3 }
       ] },
+
+    /* ═══ 4. Love Case — 3 TON = 375 ⭐ — EV/цена = 0.40× ═══ */
     { id: 4, name: 'Love Case', price: 3, color: 'g-pink',
-      cheapPool: [{ name: 'Cake', price: 0.40, chance: 12 }, { name: 'Cookie Heart', price: 0.96, chance: 8 }],
+      cheapPool: [
+        { name: 'Cake',          price: 0.40,   chance: 95 },
+        { name: 'Cookie Heart',  price: 4.69,   chance: 0.5 },
+        { name: 'Valentine Box', price: 11.53,  chance: 1.0 },
+        { name: 'Love Candle',   price: 9.49,   chance: 1.0 }
+      ],
       items: [
-        { name: 'Eternal Rose', price: 25.18, chance: 2.5 },
-        { name: 'Cupid Charm', price: 21.59, chance: 1.5 },
-        { name: 'Trapped Heart', price: 15.20, chance: 6 },
-        { name: 'Love Potion', price: 14.45, chance: 15 },
-        { name: 'Valentine Box', price: 11.53, chance: 25 },
-        { name: 'Love Candle', price: 9.49, chance: 30 }
+        { name: 'Cupid Charm',   price: 17.59,  chance: 0.7 },
+        { name: 'Trapped Heart', price: 15.20,  chance: 0.7 },
+        { name: 'Love Potion',   price: 14.45,  chance: 0.7 },
+        { name: 'Sakura Flower', price: 9.87,   chance: 0.2 },
+        { name: 'Hanging Star',  price: 9.07,   chance: 0.1 },
+        { name: 'Berry Box',     price: 8.58,   chance: 0.05 },
+        { name: 'Fine Pen',      price: 8.77,   chance: 0.05 }
       ] },
+
+    /* ═══ 5. Halloween Case — 5 TON = 625 ⭐ — EV/цена = 0.70× ═══ */
     { id: 5, name: 'Halloween Case', price: 5, color: 'g-orange',
-      cheapPool: [{ name: 'Cake', price: 0.40, chance: 10 }, { name: 'Cookie Heart', price: 0.96, chance: 8 }],
+      cheapPool: [
+        { name: 'Trophy',     price: 0.80,  chance: 25 },
+        { name: 'Big Year',   price: 4.00,  chance: 25 },
+        { name: 'Lol Pop',    price: 3.94,  chance: 15 },
+        { name: 'Jester Hat', price: 4.03,  chance: 15 },
+        { name: 'Hex Pot',    price: 4.39,  chance: 15 }
+      ],
       items: [
-        { name: 'Scared Cat', price: 229.45, chance: 0.8 },
-        { name: 'Voodoo Doll', price: 35.14, chance: 4 },
-        { name: 'Electric Skull', price: 24.94, chance: 8 },
-        { name: 'Mad Pumpkin', price: 12.46, chance: 12 },
-        { name: 'Skull Flower', price: 11.17, chance: 20 },
-        { name: 'Evil Eye', price: 7.45, chance: 35 }
+        { name: 'Scared Cat',     price: 229.45, chance: 0.3 },
+        { name: 'Voodoo Doll',    price: 35.14,  chance: 0.6 },
+        { name: 'Electric Skull', price: 24.94,  chance: 0.7 },
+        { name: 'Mad Pumpkin',    price: 12.46,  chance: 0.9 },
+        { name: 'Skull Flower',   price: 11.17,  chance: 0.6 },
+        { name: 'Evil Eye',       price: 7.45,   chance: 0.5 },
+        { name: 'Jolly Chimp',    price: 7.03,   chance: 0.5 },
+        { name: 'Mask',           price: 6.58,   chance: 0.5 },
+        { name: 'Moon Pendant',   price: 6.20,   chance: 0.4 }
       ] },
+
+    /* ═══ 6. Magic Case — 7 TON = 875 ⭐ — EV/цена = 0.80× ═══ */
     { id: 6, name: 'Magic Case', price: 7, color: 'g-purple',
-      cheapPool: [{ name: 'Cookie Heart', price: 0.96, chance: 10 }, { name: 'Jester Hat', price: 1.60, chance: 8 }],
+      cheapPool: [
+        { name: 'Trophy',       price: 0.80,   chance: 20 },
+        { name: 'Light Sword',  price: 6.10,   chance: 15 },
+        { name: 'Spy Agaric',   price: 5.52,   chance: 12 },
+        { name: 'Lush Bouquet', price: 5.81,   chance: 12 },
+        { name: 'Input Key',    price: 6.23,   chance: 12 }
+      ],
       items: [
-        { name: 'Magic Potion', price: 54.09, chance: 0.3 },
-        { name: 'Genie Lamp', price: 33.23, chance: 0.7 },
-        { name: 'Crystal Ball', price: 12.05, chance: 4 },
-        { name: 'Flying Broom', price: 11.96, chance: 7 },
-        { name: 'Spy Agaric', price: 5.52, chance: 15 },
-        { name: 'Witch Hat', price: 4.86, chance: 25 },
-        { name: 'Hex Pot', price: 4.39, chance: 30 }
+        { name: 'Magic Potion',   price: 54.09,  chance: 1.0 },
+        { name: 'Genie Lamp',     price: 33.23,  chance: 1.2 },
+        { name: 'Crystal Ball',   price: 12.05,  chance: 1.0 },
+        { name: 'Flying Broom',   price: 11.96,  chance: 1.0 },
+        { name: 'Top Hat',        price: 10.18,  chance: 0.8 },
+        { name: 'Eternal Candle', price: 5.90,   chance: 8 },
+        { name: 'Witch Hat',      price: 4.86,   chance: 6 },
+        { name: 'Stellar Rocket', price: 4.85,   chance: 5 },
+        { name: 'Whip Cupcake',   price: 4.38,   chance: 5 }
       ] },
+
+    /* ═══ 7. Animal Case — 10 TON = 1250 ⭐ — EV/цена = 0.80× ═══ */
     { id: 7, name: 'Animal Case', price: 10, color: 'g-dark',
-      cheapPool: [{ name: 'Jester Hat', price: 1.60, chance: 10 }, { name: 'Happy Brownie', price: 2.80, chance: 8 }],
+      cheapPool: [
+        { name: 'Trophy',        price: 0.80,   chance: 20 },
+        { name: 'Fine Pen',      price: 8.77,   chance: 15 },
+        { name: 'Berry Box',     price: 8.58,   chance: 12 },
+        { name: 'Jelly Bunny',   price: 7.85,   chance: 10 },
+        { name: 'Bunny Muffin',  price: 7.78,   chance: 10 },
+        { name: 'Sakura Flower', price: 9.87,   chance: 10 }
+      ],
       items: [
-        { name: 'Scared Cat', price: 229.45, chance: 0.1 },
-        { name: 'Kissed Frog', price: 37.22, chance: 0.4 },
-        { name: 'Toy Bear', price: 35.96, chance: 1 },
-        { name: 'Rare Bird', price: 24.23, chance: 3.5 },
-        { name: 'Jolly Chimp', price: 7.03, chance: 12 },
-        { name: 'Pet Snake', price: 4.05, chance: 25 },
-        { name: 'Lunar Snake', price: 4.00, chance: 20 },
-        { name: 'Snake Box', price: 3.99, chance: 30 }
+        { name: 'Scared Cat',  price: 229.45, chance: 1.0 },
+        { name: 'Kissed Frog', price: 37.22,  chance: 1.5 },
+        { name: 'Toy Bear',    price: 35.96,  chance: 1.5 },
+        { name: 'Rare Bird',   price: 24.23,  chance: 1.0 },
+        { name: 'Jolly Chimp', price: 7.03,   chance: 6 },
+        { name: 'Pet Snake',   price: 4.05,   chance: 4 },
+        { name: 'Lunar Snake', price: 4.00,   chance: 4 },
+        { name: 'Snake Box',   price: 3.99,   chance: 4 }
       ] },
+
+    /* ═══ 8. Gaming Case — 15 TON = 1875 ⭐ — EV/цена = 0.80× ═══ */
     { id: 8, name: 'Gaming Case', price: 15, color: 'g-yellow',
-      cheapPool: [{ name: 'Happy Brownie', price: 2.80, chance: 10 }, { name: 'Xmas Stocking', price: 3.50, chance: 8 }],
+      cheapPool: [
+        { name: 'Trophy',        price: 0.80,   chance: 20 },
+        { name: 'Record Player', price: 12.62,  chance: 20 },
+        { name: 'Crystal Ball',  price: 12.05,  chance: 15 },
+        { name: 'Flying Broom',  price: 11.96,  chance: 15 },
+        { name: 'Mad Pumpkin',   price: 12.46,  chance: 10 }
+      ],
       items: [
-        { name: 'Perfume Bottle', price: 74.36, chance: 0.4 },
-        { name: 'Mini Oscar', price: 73.44, chance: 0.1 },
-        { name: 'Record Player', price: 12.62, chance: 1.5 },
-        { name: 'Surge Board', price: 6.84, chance: 3 },
-        { name: 'Input Key', price: 6.23, chance: 12 },
-        { name: 'Light Sword', price: 6.10, chance: 18 },
-        { name: 'Jack-in-the-Box', price: 4.39, chance: 22 },
-        { name: 'Tama Gadget', price: 4.02, chance: 25 }
+        { name: 'Perfume Bottle', price: 74.36,  chance: 0.5 },
+        { name: 'Mini Oscar',     price: 73.44,  chance: 0.5 },
+        { name: 'Ion Gem',        price: 71.40,  chance: 0.5 },
+        { name: 'Gem Signet',     price: 61.19,  chance: 0.5 },
+        { name: 'Artisan Brick',  price: 60.18,  chance: 0.5 },
+        { name: 'Low Rider',      price: 54.21,  chance: 0.5 },
+        { name: 'Magic Potion',   price: 54.09,  chance: 0.5 },
+        { name: 'Swiss Watch',    price: 49.17,  chance: 0.5 },
+        { name: 'Bonded Ring',    price: 40.39,  chance: 0.5 },
+        { name: 'Sharp Tongue',   price: 43.85,  chance: 0.5 },
+        { name: 'Vintage Cigar',  price: 36.61,  chance: 0.5 },
+        { name: 'Surge Board',    price: 6.84,   chance: 8 },
+        { name: 'Input Key',      price: 6.23,   chance: 7 }
       ] },
+
+    /* ═══ 9. Gem Case — 20 TON = 2500 ⭐ — EV/цена = 0.70× ═══ */
     { id: 9, name: 'Gem Case', price: 20, color: 'g-yellow',
-      cheapPool: [{ name: 'Xmas Stocking', price: 3.50, chance: 10 }, { name: 'Happy Brownie', price: 5.60, chance: 8 }],
+      cheapPool: [
+        { name: 'Trophy',        price: 0.80,   chance: 78.86 },
+        { name: 'Bonded Ring',   price: 40.39,  chance: 0.84 },
+        { name: 'Sharp Tongue',  price: 43.85,  chance: 0.92 },
+        { name: 'Vintage Cigar', price: 36.61,  chance: 0.76 },
+        { name: 'Neko Helmet',   price: 37.52,  chance: 0.78 }
+      ],
       items: [
-        { name: 'Loot Bag', price: 121.27, chance: 0.1 },
-        { name: 'Astral Shard', price: 117.19, chance: 0.4 },
-        { name: 'Nail Bracelet', price: 114.67, chance: 2 },
-        { name: 'Ion Gem', price: 71.40, chance: 4.5 },
-        { name: 'Gem Signet', price: 61.19, chance: 8 },
-        { name: 'Bonded Ring', price: 40.39, chance: 15 },
-        { name: 'Signet Ring', price: 32.62, chance: 22 },
-        { name: 'Diamond Ring', price: 30.60, chance: 30 }
+        { name: 'Loot Bag',      price: 121.27, chance: 2.53 },
+        { name: 'Astral Shard',  price: 117.19, chance: 2.45 },
+        { name: 'Nail Bracelet', price: 114.67, chance: 2.40 },
+        { name: 'Mighty Arm',    price: 115.00, chance: 2.40 },
+        { name: 'Ion Gem',       price: 71.40,  chance: 1.49 },
+        { name: 'Gem Signet',    price: 61.19,  chance: 1.28 },
+        { name: 'Magic Potion',  price: 54.09,  chance: 1.13 },
+        { name: 'Low Rider',     price: 54.21,  chance: 1.13 },
+        { name: 'Swiss Watch',   price: 49.17,  chance: 1.03 },
+        { name: 'Diamond Ring',  price: 30.60,  chance: 0.64 },
+        { name: 'Signet Ring',   price: 32.62,  chance: 0.68 },
+        { name: 'Genie Lamp',    price: 33.23,  chance: 0.69 }
       ] },
+
+    /* ═══ 10. Royal Case — 150 TON = 18750 ⭐ — EV/цена = 0.70× ═══ */
     { id: 10, name: 'Royal Case', price: 150, color: 'g-green',
-      cheapPool: [{ name: 'Trophy', price: 0.80, chance: 10 }, { name: 'Fine Pen', price: 8.77, chance: 8 }],
+      cheapPool: [
+        { name: 'Trophy',           price: 0.80,   chance: 0.09 },
+        { name: 'Nail Bracelet',    price: 114.67, chance: 13.56 },
+        { name: 'Mighty Arm',       price: 115.00, chance: 13.60 },
+        { name: 'Loot Bag',         price: 121.27, chance: 14.34 },
+        { name: 'Westside Sign',    price: 98.83,  chance: 11.69 },
+        { name: "Durov's Glasses",  price: 91.80,  chance: 10.86 },
+        { name: 'Ion Gem',          price: 71.40,  chance: 8.44 },
+        { name: 'Gem Signet',       price: 61.19,  chance: 7.24 },
+        { name: 'Low Rider',        price: 54.21,  chance: 6.41 },
+        { name: 'Magic Potion',     price: 54.09,  chance: 6.40 },
+        { name: 'Swiss Watch',      price: 49.17,  chance: 5.82 }
+      ],
       items: [
-        { name: 'Plush Pepe', price: 6630, chance: 0.1 },
-        { name: 'Durov\u2019s Figurine', price: 1223.25, chance: 0.4 },
-        { name: 'Durov\u2019s Cap', price: 397.80, chance: 1.5 },
-        { name: 'Mighty Arm', price: 115.00, chance: 30 },
-        { name: 'Nail Bracelet', price: 114.67, chance: 22 },
-        { name: 'Westside Sign', price: 98.83, chance: 7 },
-        { name: "Durov's Glasses", price: 91.80, chance: 0.4 }
+        { name: 'Plush Pepe',        price: 6630,    chance: 0.485 },
+        { name: 'Airplane',          price: 6300,    chance: 0.461 },
+        { name: 'Algorithm Cup',     price: 2499,    chance: 0.183 },
+        { name: 'Intelligence Cup',  price: 2386.8,  chance: 0.175 },
+        { name: "Durov's Figurine",  price: 1223.25, chance: 0.090 },
+        { name: 'Heart Locket',      price: 1116.9,  chance: 0.082 },
+        { name: "Durov's Cap",       price: 397.80,  chance: 0.029 },
+        { name: 'Precious Peach',    price: 254.99,  chance: 0.019 },
+        { name: 'Scared Cat',        price: 229.45,  chance: 0.017 },
+        { name: "Khabib's Papakha",  price: 194.00,  chance: 0.014 },
+        { name: 'Heroic Helmet',     price: 179.95,  chance: 0.013 }
       ] }
 ];
+
+/* ═══════════════════════════════════════════════════════════
+ * УТИЛИТЫ
+ * ═══════════════════════════════════════════════════════════ */
+
+window.pickGiftForWin = function (amount) {
+    if (!amount || amount <= 0) return { gift: null, remainder: 0 };
+    const pool = window.ALL_GIFTS.filter(g => g.price <= amount);
+    if (!pool.length) return { gift: null, remainder: amount };
+    pool.sort((a, b) => b.price - a.price);
+    const best = pool[0];
+    return { gift: best, remainder: amount - best.price };
+};
 
 /* ═══════════ СОСТОЯНИЕ ═══════════ */
 let currentCase = null;
@@ -186,7 +311,7 @@ function getFullItems(c) {
 }
 
 function getGiftImageByName(name, price) {
-    if (window.ROOT_ITEMS.has(name) || price < 3) {
+    if (window.ROOT_ITEMS.has(name) || LOCAL_IMAGE_NAMES.has(name) || price < 3) {
         const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '');
         return slug + '.png';
     }
@@ -200,7 +325,7 @@ function getGiftImageByName(name, price) {
 }
 
 function getGiftLottieSafe(name, price) {
-    if (window.ROOT_ITEMS.has(name) || price < 3) return null;
+    if (window.ROOT_ITEMS.has(name) || LOCAL_IMAGE_NAMES.has(name) || price < 3) return null;
     return `https://cdn.changes.tg/gifts/models/${window.encodePathPart(name)}/lottie/Original.json`;
 }
 
@@ -266,7 +391,7 @@ function renderModal() {
     $('qtyRow').style.display = 'flex';
     $('openBtnWrap').style.display = 'block';
 
-        $('openBtnWrap').innerHTML = `
+    $('openBtnWrap').innerHTML = `
         <button class="open-btn" id="openBtn" onclick="openCase()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
             Открыть кейс
@@ -412,33 +537,7 @@ function lockCaseUI(lock) {
     });
 }
 
-/* ═══════════ БЫСТРОЕ ОТКРЫТИЕ ═══════════ */
-function quickOpenCase() {
-    if (!currentCase || isOpening) return;
-    const totalStars = Math.round(currentCase.price * 125 * selectedQty);
-    if (userStars < totalStars) { showToast('Недостаточно звёзд', 'err'); return; }
-
-    isOpening = true;
-    lockCaseUI(true);
-
-    const wonGifts = [];
-    for (let i = 0; i < selectedQty; i++) {
-        wonGifts.push(pickRandomGift(getFullItems(currentCase)));
-    }
-
-    userStars -= totalStars;
-    saveStars();
-    updateBalance();
-    checkAndGrantStarterBonus();
-
-    const savedItems = wonGifts.map(gift => saveWinToInventory(gift));
-    currentWinItems = savedItems;
-
-    showWinResultInModal(wonGifts);
-    setOpening(false);
-}
-
-/* ═══════════ ОБЫЧНОЕ ОТКРЫТИЕ ═══════════ */
+/* ═══════════ ОТКРЫТИЕ ═══════════ */
 function openCase() {
     if (!currentCase || isOpening) return;
     const totalStars = Math.round(currentCase.price * 125 * selectedQty);
@@ -500,27 +599,19 @@ function runSpinRoulette(wonGifts) {
     track.style.transform = 'translateX(0)';
     void track.offsetWidth;
 
-      requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
         const firstItem = track.querySelector('.roulette-item');
         if (!firstItem) return;
 
         const itemRect = firstItem.getBoundingClientRect();
         const wrapRect = $('rouletteWrap').getBoundingClientRect();
 
-        // Ширина одного item + gap
         const gap = 8;
         const step = itemRect.width + gap;
-
-        // Левый отступ трека (padding-left у .roulette-track)
         const trackPaddingLeft = 6;
 
-        // Позиция центра 42-го элемента относительно начала трека
         const targetCenter = trackPaddingLeft + step * 42 + itemRect.width / 2;
-
-        // Центр видимой области рулетки
         const wrapCenter = wrapRect.width / 2;
-
-        // Сдвиг = центр рулетки минус позиция элемента
         const offset = wrapCenter - targetCenter;
 
         track.style.transition = 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)';
@@ -599,11 +690,11 @@ function runMultiSpin(wonGifts) {
 
                 const targetCenter = trackPaddingLeft + step * 42 + itemRect.width / 2;
                 const rowCenter = rowRect.width / 2;
-
                 const offset = rowCenter - targetCenter;
 
                 track.style.transition = `transform ${duration}ms cubic-bezier(0.25, 0.1, 0.25, 1)`;
-                track.style.transform = `translateX(${offset}px)`;            });
+                track.style.transform = `translateX(${offset}px)`;
+            });
         }, delay);
     });
 
@@ -801,8 +892,6 @@ function setOpening(v) {
     if (!v) {
         const btn = $('openBtn');
         if (btn) btn.disabled = false;
-        const qbtn = $('quickOpenBtn');
-        if (qbtn) qbtn.disabled = false;
         document.querySelectorAll('.qty-btn').forEach(b => b.classList.remove('locked'));
     }
 }
@@ -818,7 +907,6 @@ function showToast(msg, type = 'ok') {
 window.openCaseModal = openCaseModal;
 window.setQty = setQty;
 window.openCase = openCase;
-window.quickOpenCase = quickOpenCase;
 window.closeModalAndReset = closeModalAndReset;
 window.closeModal = closeModal;
 window.sellCurrentWin = sellCurrentWin;

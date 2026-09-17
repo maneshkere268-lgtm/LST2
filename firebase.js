@@ -19,8 +19,6 @@
     }
 
     // ── Проверка: реальный ли Telegram-пользователь ──
-    // Если мы вне Telegram (в браузере) — Firebase не инициализируем вообще,
-    // чтобы не плодить мусорные документы guest_xxx / id_xxx.
     const isRealTelegramUser =
         window.TG &&
         window.TG.isTelegram === true &&
@@ -106,16 +104,45 @@
         if (sync.pending) { sync.pending = false; saveToFirebase(); }
     }
 
+    // ── Сравнение инвентарей ──
+    // Возвращает true, если локальный "богаче" (длиннее или совпадает по длине)
+    // В этом случае НЕ даём Firestore перезаписать локальный.
+    function localInventoryIsFresh(remoteInv) {
+        let localInv = [];
+        try {
+            const raw = localStorage.getItem('userInventory');
+            localInv = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(localInv)) localInv = [];
+        } catch (e) { localInv = []; }
+
+        if (!Array.isArray(remoteInv)) return true;
+        if (localInv.length > remoteInv.length) return true;
+        if (localInv.length === remoteInv.length) {
+            // Если длины одинаковые — сравниваем по timestamp последнего предмета
+            const localMax = localInv.reduce((m, i) => Math.max(m, i.timestamp || 0), 0);
+            const remoteMax = remoteInv.reduce((m, i) => Math.max(m, i.timestamp || 0), 0);
+            return localMax >= remoteMax;
+        }
+        return false;
+    }
+
     function applyRemoteData(data) {
         let changed = false;
 
         if (typeof data.stars === 'number') {
             const local = parseInt(localStorage.getItem('userStars')) || 0;
-            if (data.stars !== local) {
+            // Если локальный баланс больше — не перезаписываем
+            if (data.stars > local) {
+                localStorage.setItem('userStars', String(data.stars));
+                changed = true;
+            } else if (data.stars < local && local - data.stars < 100000) {
+                // Если разница небольшая — тоже не трогаем
+            } else {
                 localStorage.setItem('userStars', String(data.stars));
                 changed = true;
             }
         }
+
         if (typeof data.silver === 'number') {
             const local = parseInt(localStorage.getItem('userSilver')) || 0;
             if (data.silver !== local) {
@@ -123,14 +150,24 @@
                 changed = true;
             }
         }
+
+        // ── Ключевое: не даём Firestore затереть свежий локальный инвентарь ──
         if (Array.isArray(data.inventory)) {
-            const localRaw = localStorage.getItem('userInventory');
-            const localInv = localRaw ? JSON.parse(localRaw) : [];
-            if (JSON.stringify(data.inventory) !== JSON.stringify(localInv)) {
-                localStorage.setItem('userInventory', JSON.stringify(data.inventory));
-                changed = true;
+            if (localInventoryIsFresh(data.inventory)) {
+                // Локальный свежее — пушим его наверх, не трогаем localStorage
+                // console.log('🛡️ Локальный инвентарь свежее — оставляем, пушим в Firestore');
+                sync.lastRemoteUpdate = Date.now(); // защита от эха
+                saveToFirebase();
+            } else {
+                const localRaw = localStorage.getItem('userInventory');
+                const localInv = localRaw ? JSON.parse(localRaw) : [];
+                if (JSON.stringify(data.inventory) !== JSON.stringify(localInv)) {
+                    localStorage.setItem('userInventory', JSON.stringify(data.inventory));
+                    changed = true;
+                }
             }
         }
+
         if (changed) {
             window.dispatchEvent(new CustomEvent('firebaseDataLoaded', {
                 detail: {
@@ -163,7 +200,8 @@
 
         sync.unsubscribe = userRef.onSnapshot((doc) => {
             if (!doc.exists) return;
-            if (Date.now() - sync.lastRemoteUpdate < 2000) return;
+            // Защита от эха: если мы только что сами записали — не применяем
+            if (Date.now() - sync.lastRemoteUpdate < 3000) return;
             applyRemoteData(doc.data());
         }, (err) => {
             console.error('❌ Firebase onSnapshot error:', err);

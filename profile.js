@@ -1,12 +1,10 @@
+// profile.js — Профиль
 const STORAGE = {
     userId: 'userId',
     userName: 'userName',
     balance: 'userStars',
     inventory: 'userInventory'
 };
-
-const STAR_ICON = 'star.png';
-const GIFT_FALLBACK = 'star.png';
 
 let userId = null;
 let userName = null;
@@ -17,11 +15,12 @@ let currentItem = null;
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
-    const params = new URLSearchParams(window.location.search);
-    userId = params.get('user_id') || localStorage.getItem(STORAGE.userId) || 'guest';
-    userName = params.get('name') || localStorage.getItem(STORAGE.userName) || 'Username';
+    window.TG.updateHeaderUI();
 
-    localStorage.setItem(STORAGE.userId, userId);
+    userId = window.TG.id;
+    userName = window.TG.getShortName();
+
+    localStorage.setItem(STORAGE.userId, String(userId));
     localStorage.setItem(STORAGE.userName, userName);
 
     userStars = parseInt(localStorage.getItem(STORAGE.balance)) || 0;
@@ -30,9 +29,16 @@ function init() {
     updateProfileUI();
     renderInventory();
 
+    window.addEventListener('firebaseDataLoaded', () => {
+        userStars = parseInt(localStorage.getItem(STORAGE.balance)) || 0;
+        loadInventory();
+        updateProfileUI();
+        renderInventory();
+    });
+
     document.addEventListener('click', e => {
         const el = e.target.closest('button, .inv-card');
-        if (el) vibrate();
+        if (el) window.vibrate();
     });
 }
 
@@ -48,25 +54,32 @@ function loadInventory() {
 
 function saveInventory() {
     localStorage.setItem(STORAGE.inventory, JSON.stringify(inventory));
+    window.FB?.save();
 }
 
 function saveBalance() {
     localStorage.setItem(STORAGE.balance, userStars.toString());
+    window.FB?.save();
 }
 
 function updateProfileUI() {
     const initial = userName.charAt(0).toUpperCase() || 'U';
-    document.getElementById('profileAvatar').textContent = initial;
+    const avatarEl = document.getElementById('profileAvatar');
+    const photo = window.TG.getPhoto();
+    if (photo) {
+        avatarEl.innerHTML = `<img src="${photo}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.parentNode.textContent='${initial}'">`;
+    } else {
+        avatarEl.textContent = initial;
+    }
+
     document.getElementById('profileName').textContent = userName;
     document.getElementById('profileId').textContent = 'ID: ' + userId;
-    document.getElementById('balanceDisplay').textContent = formatStars(userStars);
-    document.getElementById('statBalance').textContent = formatStars(userStars);
+    document.getElementById('balanceDisplay').textContent = window.formatStars(userStars);
+    document.getElementById('statBalance').textContent = window.formatStars(userStars);
 
-    // Баг-фикс: раньше тут не было fallback на price*125, как везде в проекте —
-    // предметы без явного поля stars считались за 0 в общей стоимости.
     const totalValue = inventory.reduce((sum, item) => sum + (item.stars || Math.round((item.price || 0) * 125)), 0);
     document.getElementById('statGifts').textContent = inventory.length;
-    document.getElementById('statValue').textContent = formatStars(totalValue);
+    document.getElementById('statValue').textContent = window.formatStars(totalValue);
 }
 
 function renderInventory() {
@@ -96,11 +109,11 @@ function renderCard(item) {
 
     return `
         <div class="inv-card">
-            <img src="${item.image}" alt="" onerror="this.onerror=null;this.src='${GIFT_FALLBACK}'" onclick="openItemModal('${item.id}')">
-            <div class="inv-card-name" onclick="openItemModal('${item.id}')">${escapeHtml(item.name || '')}</div>
+            <img src="${item.image}" alt="" onerror="this.onerror=null;this.src='${window.GIFT_FALLBACK}'" onclick="openItemModal('${item.id}')">
+            <div class="inv-card-name" onclick="openItemModal('${item.id}')">${window.escapeHtml(item.name || '')}</div>
             <div class="inv-card-price ${rarityClass}" onclick="openItemModal('${item.id}')">
-                <img src="${STAR_ICON}" alt="">
-                ${formatStars(stars)}
+                <img src="${window.STAR_ICON}" alt="">
+                ${window.formatStars(stars)}
             </div>
             <div class="inv-card-actions">
                 <button class="inv-card-btn inv-card-btn-sell" onclick="event.stopPropagation();quickSell('${item.id}')">Продать</button>
@@ -117,15 +130,15 @@ function openItemModal(itemId) {
     currentItem = item;
 
     const img = document.getElementById('itemModalImg');
-    img.src = item.image || GIFT_FALLBACK;
-    img.onerror = function() { this.onerror = null; this.src = GIFT_FALLBACK; };
+    img.src = item.image || window.GIFT_FALLBACK;
+    img.onerror = function() { this.onerror = null; this.src = window.GIFT_FALLBACK; };
 
     document.getElementById('itemModalName').textContent = item.name || '';
     const stars = item.stars || Math.round((item.price || 0) * 125);
-    document.getElementById('itemModalPrice').querySelector('span').textContent = formatStars(stars);
+    document.getElementById('itemModalPrice').querySelector('span').textContent = window.formatStars(stars);
 
     document.getElementById('itemModal').classList.add('open');
-    vibrate();
+    window.vibrate();
 }
 
 function closeItemModal() {
@@ -151,7 +164,6 @@ function quickUpgrade(itemId) {
 
 function sellItem() {
     if (!currentItem) return;
-
     const stars = currentItem.stars || Math.round((currentItem.price || 0) * 125);
 
     userStars += stars;
@@ -162,23 +174,18 @@ function sellItem() {
 
     updateProfileUI();
     renderInventory();
-    if (document.getElementById('itemModal').classList.contains('open')) {
-        closeItemModal();
-    }
+    if (document.getElementById('itemModal').classList.contains('open')) closeItemModal();
 
-    showToast(`Продано за ${formatStars(stars)}`, 'ok');
-    vibrate(true);
+    showToast(`Продано за ${window.formatStars(stars)}`, 'ok');
+    window.vibrate('success');
 }
 
 function openSellAllModal() {
-    if (!inventory.length) {
-        showToast('Инвентарь пуст', 'err');
-        return;
-    }
+    if (!inventory.length) { showToast('Инвентарь пуст', 'err'); return; }
     const totalStars = inventory.reduce((sum, item) => sum + (item.stars || Math.round((item.price || 0) * 125)), 0);
-    document.getElementById('sellAllValue').textContent = formatStars(totalStars);
+    document.getElementById('sellAllValue').textContent = window.formatStars(totalStars);
     document.getElementById('sellAllModal').classList.add('open');
-    vibrate();
+    window.vibrate();
 }
 
 function closeSellAllModal() {
@@ -187,9 +194,7 @@ function closeSellAllModal() {
 
 function confirmSellAll() {
     if (!inventory.length) return;
-
     const totalStars = inventory.reduce((sum, item) => sum + (item.stars || Math.round((item.price || 0) * 125)), 0);
-
     userStars += totalStars;
     saveBalance();
 
@@ -200,9 +205,8 @@ function confirmSellAll() {
     updateProfileUI();
     renderInventory();
     closeSellAllModal();
-
-    showToast(`Продано ${count} предметов за ${formatStars(totalStars)}`, 'ok');
-    vibrate(true);
+    showToast(`Продано ${count} предметов за ${window.formatStars(totalStars)}`, 'ok');
+    window.vibrate('success');
 }
 
 document.getElementById('sellAllModal').addEventListener('click', (e) => {
@@ -213,24 +217,6 @@ function upgradeItem() {
     if (!currentItem) return;
     localStorage.setItem('upgradeItemId', currentItem.id);
     window.location.href = 'upgrades.html';
-}
-
-function formatStars(stars) {
-    return Math.round(stars).toLocaleString('ru-RU');
-}
-
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-}
-
-function vibrate(strong) {
-    try {
-        if (navigator.vibrate) {
-            navigator.vibrate(strong ? [30, 20, 50] : 15);
-        }
-    } catch (e) {}
 }
 
 function showToast(msg, type = 'ok') {

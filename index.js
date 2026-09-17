@@ -1,4 +1,4 @@
-// index.js — Кейсы (быстрое открытие + полная блокировка UI)
+// index.js — Кейсы (быстрое открытие + полная блокировка UI + 4/5 сек анимация)
 const $ = id => document.getElementById(id);
 
 /* ═══════════ КЕЙСЫ ═══════════ */
@@ -139,7 +139,7 @@ function init() {
 
     document.addEventListener('click', e => {
         const el = e.target.closest('button, .case, .qty-btn, .modal-win-btn');
-        if (el) window.vibrate('light');
+        if (el && !isOpening) window.vibrate('light');
     });
 }
 
@@ -266,21 +266,11 @@ function renderModal() {
     $('qtyRow').style.display = 'flex';
     $('openBtnWrap').style.display = 'block';
 
-    // ── Кнопки: большая "Открыть" + маленькая с молнией ──
-    $('openBtnWrap').innerHTML = `
-        <div style="display:flex;gap:8px;align-items:stretch;">
-            <button class="open-btn" id="openBtn" onclick="openCase()" style="flex:1;margin:0;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
-                Открыть кейс
-            </button>
-            <button class="open-btn" id="quickOpenBtn" onclick="quickOpenCase()"
-                    title="Открыть без анимации"
-                    style="width:56px;padding:0;flex:0 0 56px;background:linear-gradient(135deg,#212121,#383838);margin:0;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;">
-                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                </svg>
-            </button>
-        </div>
+        $('openBtnWrap').innerHTML = `
+        <button class="open-btn" id="openBtn" onclick="openCase()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+            Открыть кейс
+        </button>
     `;
 
     const fullItems = getFullItems(currentCase);
@@ -382,7 +372,6 @@ function lockCaseUI(lock) {
     const modal = $('caseModal');
     if (!modal) return;
 
-    // Все интерактивные элементы внутри модалки
     modal.querySelectorAll('button, .qty-btn, .content-item, .roulette-item, .case, .modal-win-btn')
         .forEach(el => {
             if (lock) {
@@ -396,12 +385,10 @@ function lockCaseUI(lock) {
             }
         });
 
-    // Оверлей (клик вне модалки) — не даём закрыть
     modal.style.pointerEvents = lock ? 'none' : '';
     const content = modal.querySelector('.modal');
     if (content) content.style.pointerEvents = 'auto';
 
-    // Нижняя навигация — блокируем переходы
     document.querySelectorAll('.bnav button').forEach(el => {
         if (lock) {
             el.setAttribute('disabled', 'disabled');
@@ -414,7 +401,6 @@ function lockCaseUI(lock) {
         }
     });
 
-    // Хедер — блокируем клики по профилю
     document.querySelectorAll('header .user-profile, header button').forEach(el => {
         if (lock) {
             el.style.pointerEvents = 'none';
@@ -445,7 +431,6 @@ function quickOpenCase() {
     updateBalance();
     checkAndGrantStarterBonus();
 
-    // Сразу сохраняем в инвентарь — дроп не потеряется
     const savedItems = wonGifts.map(gift => saveWinToInventory(gift));
     currentWinItems = savedItems;
 
@@ -472,7 +457,6 @@ function openCase() {
     updateBalance();
     checkAndGrantStarterBonus();
 
-    // ВАЖНО: сразу сохраняем в инвентарь — закрытие модалки не отменит дроп
     const savedItems = wonGifts.map(gift => saveWinToInventory(gift));
     currentWinItems = savedItems;
 
@@ -486,6 +470,9 @@ function pickRandomGift(items) {
     return items[0];
 }
 
+/* ═══════════════════════════════════════════════════════════
+ * РУЛЕТКА — 4 секунды (одиночная) / 5 секунд (мульти)
+ * ═══════════════════════════════════════════════════════════ */
 function runSpinRoulette(wonGifts) {
     const giftsArr = Array.isArray(wonGifts) ? wonGifts : [wonGifts];
     if (giftsArr.length > 1) { runMultiSpin(giftsArr); return; }
@@ -513,25 +500,42 @@ function runSpinRoulette(wonGifts) {
     track.style.transform = 'translateX(0)';
     void track.offsetWidth;
 
-    requestAnimationFrame(() => {
-        const itemWidth = 118;
-        const wrap = $('rouletteWrap');
-        const centerOffset = wrap.offsetWidth / 2;
-        const targetPos = itemWidth * 42 + itemWidth / 2;
-        track.style.transition = 'transform 7s cubic-bezier(0.25, 0.1, 0.25, 1)';
-        track.style.transform = `translateX(${centerOffset - targetPos}px)`;
+      requestAnimationFrame(() => {
+        const firstItem = track.querySelector('.roulette-item');
+        if (!firstItem) return;
+
+        const itemRect = firstItem.getBoundingClientRect();
+        const wrapRect = $('rouletteWrap').getBoundingClientRect();
+
+        // Ширина одного item + gap
+        const gap = 8;
+        const step = itemRect.width + gap;
+
+        // Левый отступ трека (padding-left у .roulette-track)
+        const trackPaddingLeft = 6;
+
+        // Позиция центра 42-го элемента относительно начала трека
+        const targetCenter = trackPaddingLeft + step * 42 + itemRect.width / 2;
+
+        // Центр видимой области рулетки
+        const wrapCenter = wrapRect.width / 2;
+
+        // Сдвиг = центр рулетки минус позиция элемента
+        const offset = wrapCenter - targetCenter;
+
+        track.style.transition = 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        track.style.transform = `translateX(${offset}px)`;
     });
 
     let spinVibCount = 0;
-    spinInterval = setInterval(() => { window.vibrate('light'); spinVibCount++; if (spinVibCount > 12) clearInterval(spinInterval); }, 500);
+    spinInterval = setInterval(() => { window.vibrate('light'); spinVibCount++; if (spinVibCount > 8) clearInterval(spinInterval); }, 450);
 
     const onTransitionEnd = (e) => {
         if (e.propertyName !== 'transform') return;
         track.removeEventListener('transitionend', onTransitionEnd);
-        clearInterval(spinInterval);
-        spinInterval = null;
+        if (spinInterval) { clearInterval(spinInterval); spinInterval = null; }
         window.vibrate('success');
-        setTimeout(() => showWinResultInModal(giftsArr), 400);
+        setTimeout(() => showWinResultInModal(giftsArr), 300);
     };
     track.addEventListener('transitionend', onTransitionEnd);
 
@@ -540,7 +544,7 @@ function runSpinRoulette(wonGifts) {
             if (spinInterval) { clearInterval(spinInterval); spinInterval = null; }
             showWinResultInModal(giftsArr);
         }
-    }, 8500);
+    }, 5000);
 }
 
 function runMultiSpin(wonGifts) {
@@ -578,23 +582,34 @@ function runMultiSpin(wonGifts) {
         track.style.transition = 'none';
         track.style.transform = 'translateX(0)';
 
-        const delay = idx * 400;
-        const duration = 6500 + idx * 500;
+        const delay = idx * 300;
+        const duration = 5000 + idx * 300;
 
         setTimeout(() => {
             requestAnimationFrame(() => {
-                const itemWidth = 118;
-                const centerOffset = row.offsetWidth / 2;
-                const targetPos = itemWidth * 42 + itemWidth / 2;
+                const firstItem = track.querySelector('.roulette-item');
+                if (!firstItem) return;
+
+                const itemRect = firstItem.getBoundingClientRect();
+                const rowRect = row.getBoundingClientRect();
+
+                const gap = 8;
+                const step = itemRect.width + gap;
+                const trackPaddingLeft = 6;
+
+                const targetCenter = trackPaddingLeft + step * 42 + itemRect.width / 2;
+                const rowCenter = rowRect.width / 2;
+
+                const offset = rowCenter - targetCenter;
+
                 track.style.transition = `transform ${duration}ms cubic-bezier(0.25, 0.1, 0.25, 1)`;
-                track.style.transform = `translateX(${centerOffset - targetPos}px)`;
-            });
+                track.style.transform = `translateX(${offset}px)`;            });
         }, delay);
     });
 
     let vc = 0;
-    const vi = setInterval(() => { window.vibrate('light'); vc++; if (vc > 12) clearInterval(vi); }, 500);
-    const totalTime = 6500 + (count - 1) * 500 + 400;
+    const vi = setInterval(() => { window.vibrate('light'); vc++; if (vc > 10) clearInterval(vi); }, 400);
+    const totalTime = 5000 + (count - 1) * 300 + 400;
 
     setTimeout(() => { clearInterval(vi); window.vibrate('success'); showWinResultInModal(wonGifts); }, totalTime);
 }

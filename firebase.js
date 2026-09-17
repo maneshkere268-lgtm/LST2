@@ -1,4 +1,5 @@
 // firebase.js — Firestore синхронизация (users/<username>)
+// Гости из браузера (без Telegram) НЕ создают записи в Firebase.
 (function () {
     'use strict';
 
@@ -17,13 +18,38 @@
         return;
     }
 
+    // ── Проверка: реальный ли Telegram-пользователь ──
+    // Если мы вне Telegram (в браузере) — Firebase не инициализируем вообще,
+    // чтобы не плодить мусорные документы guest_xxx / id_xxx.
+    const isRealTelegramUser =
+        window.TG &&
+        window.TG.isTelegram === true &&
+        window.TG.user &&
+        window.TG.user.id &&
+        !String(window.TG.user.id).startsWith('guest_') &&
+        !String(window.TG.user.id).startsWith('demo');
+
+    if (!isRealTelegramUser) {
+        console.log('🚫 Браузер/демо — Firebase отключён, данные только в localStorage');
+        window.FB = {
+            disabled: true,
+            db: null,
+            userRef: null,
+            docId: null,
+            save: () => {},
+            load: async () => false,
+            subscribe: () => {},
+            unsubscribe: () => {}
+        };
+        return;
+    }
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
     // ── Doc ID = username (без @), fallback на id_<telegram_id> ──
     function buildDocId() {
-        const u = window.TG?.user;
-        if (!u) return 'guest';
+        const u = window.TG.user;
         const uname = (u.username || '').replace(/^@/, '').trim().toLowerCase();
         if (uname) return uname;
         return 'id_' + u.id;
@@ -49,11 +75,11 @@
         } catch (e) {}
 
         return {
-            telegramId: window.TG?.user?.id || null,
-            username: (window.TG?.user?.username || '').replace(/^@/, ''),
-            firstName: window.TG?.user?.first_name || '',
-            lastName: window.TG?.user?.last_name || '',
-            photoUrl: window.TG?.user?.photo_url || '',
+            telegramId: window.TG.user.id,
+            username: (window.TG.user.username || '').replace(/^@/, ''),
+            firstName: window.TG.user.first_name || '',
+            lastName: window.TG.user.last_name || '',
+            photoUrl: window.TG.user.photo_url || '',
             stars: parseInt(localStorage.getItem('userStars')) || 0,
             silver: parseInt(localStorage.getItem('userSilver')) || 0,
             inventory,
@@ -165,6 +191,7 @@
     });
 
     window.FB = {
+        disabled: false,
         db,
         userRef,
         docId,
